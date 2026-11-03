@@ -1,0 +1,20 @@
+# Configuração do Supabase CLI para o projeto Vivah.
+# `supabase link --project-ref <ref>` liga esta pasta ao projeto na nuvem.
+project_id = "vivah-app"
+
+[auth]
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["vivahapp://"]
+
+[auth.email]
+enable_signup = true
+# Código de 6 dígitos no e-mail (funciona igual no app e na web, sem link mágico).
+otp_length = 6
+otp_expiry = 3600
+
+[functions.hotmart-webhook]
+# A Hotmart não manda o token do Supabase; a função confere o hottok.
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = true

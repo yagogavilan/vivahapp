@@ -1,18 +1,22 @@
 {
   "expo": {
-    "name": "vivah-app",
-    "slug": "vivah-app",
+    "name": "Vivah",
+    "slug": "vivah",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "vivahapp",
-    "userInterfaceStyle": "automatic",
+    "scheme": "vivah",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F6F2EA",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "br.com.vivah.app",
+      "supportsTablet": true,
+      "config": { "usesNonExemptEncryption": false }
     },
     "android": {
+      "package": "br.com.vivah.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#124F58",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -20,19 +24,32 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "Vivah",
+      "shortName": "Vivah",
+      "themeColor": "#124F58",
+      "backgroundColor": "#F6F2EA"
     },
     "plugins": [
       "expo-router",
+      "expo-font",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#124F58",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 160
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "enableBackgroundPlayback": true
+        }
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,
