@@ -1,10 +1,11 @@
 import { useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 
 import { SaveLiveButton } from '@/components/aquecimento';
 import { Card, Empty, Icon, Loading, Pill, Row, Screen, Txt } from '@/components/ui';
 import { YouTubeEmbed } from '@/components/youtube-embed';
-import { useLives } from '@/data/hooks';
+import { useLives, useLogActivity } from '@/data/hooks';
 import { formatCountdown, formatTime, formatWhen } from '@/domain/dates';
 import { liveStatus } from '@/domain/schedule';
 import { colors, space } from '@/theme';
@@ -12,8 +13,17 @@ import { colors, space } from '@/theme';
 export default function LiveScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lives = useLives();
-  if (lives.isPending) return <Loading />;
+  const log = useLogActivity();
   const live = lives.data?.find((l) => l.id === id);
+  const watching = Boolean(live?.youtubeId) && live !== undefined && ['live', 'replay'].includes(liveStatus(live));
+
+  // Assistir à live (ou ao replay) conta como atividade do dia.
+  useEffect(() => {
+    if (watching && live) log.mutate({ kind: 'live', ref: live.id, minutes: 60 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watching, live?.id]);
+
+  if (lives.isPending) return <Loading />;
   if (!live) return <Screen padTop={false}><Empty icon="radio" title="Live não encontrada" /></Screen>;
 
   const status = liveStatus(live);

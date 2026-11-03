@@ -4,7 +4,8 @@ import { Pressable, View } from 'react-native';
 import { useSession } from '@/auth/session';
 import { CheckinStrip, DiagnosticBars } from '@/components/charts';
 import { Button, Card, Icon, type IconName, LinkText, Row, Screen, Txt } from '@/components/ui';
-import { useCheckins, useLatestDiagnostic, useLibrary } from '@/data/hooks';
+import { WeekStrip } from '@/components/engagement';
+import { useCheckins, useLatestDiagnostic, useLibrary, useProgress, useStreak } from '@/data/hooks';
 import { formatShortDate } from '@/domain/dates';
 import { confirm } from '@/lib/dialogs';
 import { colors, space } from '@/theme';
@@ -26,6 +27,9 @@ export default function Perfil() {
   const library = useLibrary();
   const diagnostic = useLatestDiagnostic();
   const checkins = useCheckins(14);
+  const streak = useStreak();
+  const progress = useProgress();
+  const lessonsDone = (progress.data ?? []).filter((p) => p.completedAt).length;
 
   const myCourses = library.data?.courses.filter((c) => !c.isFree && library.data!.access.has(c.id)) ?? [];
 
@@ -36,6 +40,30 @@ export default function Perfil() {
         <Txt variant="hero">{profile?.fullName || 'Aluno Vivah'}</Txt>
         <Txt>{user?.email}</Txt>
       </View>
+
+      {streak ? (
+        <Card onPress={() => router.push('/conquistas')} style={{ gap: space.md }}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Txt variant="heading">Sua constância</Txt>
+            <LinkText label="Conquistas" onPress={() => router.push('/conquistas')} />
+          </Row>
+          <Row style={{ justifyContent: 'space-around' }}>
+            <View style={{ alignItems: 'center' }}>
+              <Txt variant="title">{streak.current}</Txt>
+              <Txt variant="small">dias seguidos</Txt>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Txt variant="title">{streak.best}</Txt>
+              <Txt variant="small">melhor sequência</Txt>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Txt variant="title">{lessonsDone}</Txt>
+              <Txt variant="small">aulas</Txt>
+            </View>
+          </Row>
+          <WeekStrip streak={streak} />
+        </Card>
+      ) : null}
 
       <Card style={{ gap: space.md }}>
         <Row style={{ justifyContent: 'space-between' }}>
@@ -92,6 +120,9 @@ export default function Perfil() {
       </Card>
 
       <Card style={{ gap: 0 }}>
+        <MenuItem icon="heart" label="Favoritos" onPress={() => router.push('/favoritos')} />
+        <MenuItem icon="bell" label="Lembretes e sequência" onPress={() => router.push('/lembretes')} />
+        <MenuItem icon="target" label="Bloco de foco" onPress={() => router.push('/foco')} />
         <MenuItem icon="shield" label="Privacidade e meus dados" onPress={() => router.push('/privacidade')} />
         <MenuItem
           icon="log-out"

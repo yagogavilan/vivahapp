@@ -3,7 +3,8 @@ import { Pressable, View } from 'react-native';
 
 import { LockedPanel } from '@/components/locked-panel';
 import { StateBadge } from '@/components/tracks';
-import { Button, Card, Empty, ErrorState, Icon, LinkText, Loading, Pill, ProgressBar, Row, Screen, Txt } from '@/components/ui';
+import { Button, Card, Empty, ErrorState, Icon, Loading, Pill, ProgressBar, Row, Screen, Txt } from '@/components/ui';
+import { TrackCover } from '@/components/visual';
 import { useLibrary, useProgress } from '@/data/hooks';
 import type { Lesson } from '@/data/types';
 import { completion, lessonOpen, nextLesson } from '@/domain/access';
@@ -30,21 +31,46 @@ export default function Curso() {
   const percent = completion(ordered, progress.data ?? []);
   const next = nextLesson(ordered, progress.data ?? []);
   const openLesson = (l: Lesson) => router.push({ pathname: '/aula/[id]', params: { id: l.id } });
+  const totalMin = ordered.reduce((sum, l) => sum + l.durationMin, 0);
+  const remainingMin = ordered.filter((l) => !done.has(l.id)).reduce((sum, l) => sum + l.durationMin, 0);
+  // Marcos de progresso (25/50/75%): mensagens curtas aumentam a conclusão.
+  const milestone =
+    percent >= 75 && percent < 100 ? 'Reta final: você já passou de 75% do curso.'
+    : percent >= 50 && percent < 75 ? 'Metade do caminho feita. Siga no seu ritmo.'
+    : percent >= 25 && percent < 50 ? 'Você já fez um quarto do curso. Bom começo!'
+    : null;
 
   return (
     <Screen padTop={false} refreshing={library.isRefetching} onRefresh={library.refetch}>
-      <View style={{ gap: space.sm }}>
-        {track ? <LinkText label={`Trilha ${track.title}`} onPress={() => router.push({ pathname: '/trilha/[id]', params: { id: track.id } })} /> : null}
-        <Txt variant="hero">{course.title}</Txt>
-        <Txt>{course.summary}</Txt>
-        <StateBadge state={state} launchLabel={track?.launchLabel} />
-      </View>
+      {track ? (
+        <TrackCover area={track.area} muted={state === 'soon'} style={{ padding: space.xl, gap: space.sm }}>
+          <Pressable onPress={() => router.push({ pathname: '/trilha/[id]', params: { id: track.id } })}>
+            <Txt variant="eyebrow" style={{ color: state === 'soon' ? colors.coralText : colors.coral }}>Trilha {track.title}</Txt>
+          </Pressable>
+          <Txt variant="hero" style={{ color: state === 'soon' ? colors.text : colors.onDark }}>{course.title}</Txt>
+          <Txt style={{ color: state === 'soon' ? colors.textMuted : colors.onDarkMuted }}>{course.summary}</Txt>
+          <Row style={{ flexWrap: 'wrap' }}>
+            <StateBadge state={state} launchLabel={track.launchLabel} />
+            <Txt variant="small" style={{ color: state === 'soon' ? colors.textSubtle : colors.onDarkMuted }}>
+              {ordered.length} aulas · {totalMin} min
+            </Txt>
+          </Row>
+        </TrackCover>
+      ) : null}
 
       {state === 'open' ? (
         <Card style={{ gap: space.md }}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Txt variant="heading">{percent}% concluído</Txt>
+            <Txt variant="small">{remainingMin > 0 ? `faltam ${remainingMin} min` : 'tudo visto'}</Txt>
+          </Row>
           <ProgressBar value={percent} />
-          <Txt variant="small">{percent}% concluído · {done.size > 0 ? `${ordered.filter((l) => done.has(l.id)).length} de ${ordered.length} aulas` : `${ordered.length} aulas`}</Txt>
-          {next ? <Button label={percent > 0 ? 'Continuar' : 'Começar'} icon="play" onPress={() => openLesson(next)} /> : <Pill label="Curso concluído" tone="mint" icon="award" />}
+          {milestone ? <Txt variant="small" style={{ color: colors.coralText }}>{milestone}</Txt> : null}
+          {next ? (
+            <Button label={percent > 0 ? `Continuar: ${next.title}` : 'Começar'} icon="play" onPress={() => openLesson(next)} />
+          ) : (
+            <Button label="Ver certificado" icon="award" onPress={() => router.push({ pathname: '/certificado/[id]', params: { id: course.id } })} />
+          )}
         </Card>
       ) : state === 'locked' ? (
         <LockedPanel course={course} />
@@ -52,7 +78,14 @@ export default function Curso() {
 
       {mods.map((m) => (
         <View key={m.id} style={{ gap: space.sm }}>
-          <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>{m.title}</Txt>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>{m.title}</Txt>
+            {state === 'open' ? (
+              <Txt variant="small" style={{ fontSize: 13 }}>
+                {lib.lessons.filter((l) => l.moduleId === m.id && done.has(l.id)).length}/{lib.lessons.filter((l) => l.moduleId === m.id).length}
+              </Txt>
+            ) : null}
+          </Row>
           <Card style={{ gap: 0, paddingVertical: space.xs }}>
             {lib.lessons
               .filter((l) => l.moduleId === m.id)

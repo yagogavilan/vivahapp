@@ -1,7 +1,9 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
+import { useSession } from '../auth/session';
 import { useAgenda, useAgendaMutations } from '../data/hooks';
+import { scheduleLiveReminder } from '../lib/reminders';
 import type { EscudoAudio, Live } from '../data/types';
 import { formatCountdown, formatWhen } from '../domain/dates';
 import { liveStatus } from '../domain/schedule';
@@ -31,6 +33,7 @@ export function EscudoCard({ audio }: { audio: EscudoAudio }) {
 export function SaveLiveButton({ live }: { live: Live }) {
   const agenda = useAgenda();
   const { create } = useAgendaMutations();
+  const { profile } = useSession();
   const saved = agenda.data?.some((e) => e.liveId === live.id);
   if (saved) return <Pill label="Na sua agenda" tone="mint" icon="check" />;
   return (
@@ -40,7 +43,15 @@ export function SaveLiveButton({ live }: { live: Live }) {
       variant="ghost"
       loading={create.isPending}
       onPress={() =>
-        create.mutate({ title: `Live: ${live.title}`, kind: 'live', startsAt: live.startsAt, endsAt: live.endsAt, liveId: live.id, notes: null })
+        create.mutate(
+          { title: `Live: ${live.title}`, kind: 'live', startsAt: live.startsAt, endsAt: live.endsAt, liveId: live.id, notes: null },
+          {
+            // Aviso 15 min antes, se o aluno não desligou em Lembretes.
+            onSuccess: () => {
+              if (profile?.preferences?.liveReminders !== false) scheduleLiveReminder(live).catch(() => undefined);
+            },
+          },
+        )
       }
     />
   );

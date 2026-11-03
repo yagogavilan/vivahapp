@@ -1,12 +1,58 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback } from 'react';
-import { View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, View } from 'react-native';
 
 import { AudioPlayer, MediaPlaceholder, VideoPlayer } from '@/components/media';
-import { Button, Card, Empty, ErrorState, LinkText, Loading, Pill, Screen, Txt } from '@/components/ui';
-import { useLessonMedia, useLibrary, useProgress, useSaveProgress } from '@/data/hooks';
-import { lessonOpen } from '@/domain/access';
-import { space } from '@/theme';
+import { Button, Card, Empty, ErrorState, Field, Icon, LinkText, Loading, Pill, Row, Screen, Txt } from '@/components/ui';
+import { FadeIn } from '@/components/visual';
+import {
+  useFavorites,
+  useLessonMedia,
+  useLibrary,
+  useLogActivity,
+  useNote,
+  useProgress,
+  useSaveNote,
+  useSaveProgress,
+  useToggleFavorite,
+} from '@/data/hooks';
+import { completion, lessonOpen } from '@/domain/access';
+import { success } from '@/lib/haptics';
+import { colors, space } from '@/theme';
+
+function Notes({ lessonId }: { lessonId: string }) {
+  const note = useNote(lessonId);
+  const save = useSaveNote();
+  const [draft, setDraft] = useState<string | null>(null);
+  const value = draft ?? note.data ?? '';
+  const dirty = draft !== null && draft !== (note.data ?? '');
+  return (
+    <Card style={{ gap: space.sm }}>
+      <Row>
+        <Icon name="edit-3" size={18} color={colors.petrol} />
+        <Txt variant="heading">Minhas anotações</Txt>
+      </Row>
+      <Field
+        label="Só você vê"
+        value={value}
+        onChangeText={setDraft}
+        placeholder="O que você quer lembrar desta aula? Um insight, uma tarefa, uma frase."
+        multiline
+        maxLength={5000}
+      />
+      <Row style={{ justifyContent: 'space-between' }}>
+        <Txt variant="small">{save.isPending ? 'Salvando…' : dirty ? 'Alterações não salvas' : note.data ? 'Salvo' : ''}</Txt>
+        <Button
+          label="Salvar anotação"
+          variant="ghost"
+          disabled={!dirty}
+          loading={save.isPending}
+          onPress={() => save.mutate({ lessonId, body: value }, { onSuccess: () => setDraft(null) })}
+        />
+      </Row>
+    </Card>
+  );
+}
 
 export default function Aula() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,6 +60,9 @@ export default function Aula() {
   const progress = useProgress();
   const media = useLessonMedia(id);
   const save = useSaveProgress();
+  const log = useLogActivity();
+  const favorites = useFavorites();
+  const toggleFav = useToggleFavorite();
 
   const lesson = library.data?.lessons.find((l) => l.id === id);
   const onProgress = useCallback(
@@ -49,13 +98,29 @@ export default function Aula() {
   const next = ordered[idx + 1];
   const nextOpen = next && lessonOpen(next, state);
   const completed = Boolean(mine?.completedAt);
+  const percent = completion(ordered, progress.data ?? []);
+  const isFav = (favorites.data ?? []).some((f) => f.itemType === 'lesson' && f.itemId === lesson.id);
 
-  const finish = () => save.mutate({ lessonId: lesson.id, positionSec: mine?.positionSec ?? 0, completed: true });
+  const finish = () => {
+    if (completed) return;
+    success();
+    save.mutate({ lessonId: lesson.id, positionSec: mine?.positionSec ?? 0, completed: true });
+    log.mutate({ kind: 'aula', ref: lesson.id, minutes: lesson.durationMin });
+  };
 
   return (
     <Screen padTop={false}>
       <View style={{ gap: space.xs }}>
-        <LinkText label={course.title} onPress={() => router.push({ pathname: '/curso/[id]', params: { id: course.id } })} />
+        <Row style={{ justifyContent: 'space-between' }}>
+          <LinkText label={course.title} onPress={() => router.push({ pathname: '/curso/[id]', params: { id: course.id } })} />
+          <Pressable
+            onPress={() => toggleFav.mutate({ itemType: 'lesson', itemId: lesson.id, on: !isFav })}
+            accessibilityRole="button"
+            accessibilityLabel={isFav ? 'Tirar dos favoritos' : 'Salvar nos favoritos'}
+            hitSlop={10}>
+            <Icon name="heart" size={22} color={isFav ? colors.coralText : colors.textSubtle} />
+          </Pressable>
+        </Row>
         <Txt variant="title">{lesson.title}</Txt>
         <Txt variant="small">Aula {idx + 1} de {ordered.length} · {lesson.durationMin} min</Txt>
       </View>
@@ -81,6 +146,21 @@ export default function Aula() {
 
       {lesson.summary ? <Txt>{lesson.summary}</Txt> : null}
 
+      {completed && percent === 100 ? (
+        <FadeIn>
+          <Card tone="coral" style={{ gap: space.sm }}>
+            <Row>
+              <Icon name="award" color={colors.deep} />
+              <Txt variant="heading" style={{ color: colors.deep }}>Curso concluído!</Txt>
+            </Row>
+            <Txt style={{ color: colors.deep }}>Você terminou todas as aulas de {course.title}. Seu certificado está pronto.</Txt>
+            <View style={{ alignSelf: 'flex-start' }}>
+              <Button label="Ver certificado" variant="secondary" icon="award" onPress={() => router.push({ pathname: '/certificado/[id]', params: { id: course.id } })} />
+            </View>
+          </Card>
+        </FadeIn>
+      ) : null}
+
       <View style={{ gap: space.md }}>
         {completed ? (
           <Pill label="Aula concluída" tone="mint" icon="check" />
@@ -89,12 +169,19 @@ export default function Aula() {
         )}
         {next ? (
           nextOpen ? (
-            <Button label={`Próxima: ${next.title}`} icon="arrow-right" variant="ghost" onPress={() => router.replace({ pathname: '/aula/[id]', params: { id: next.id } })} />
+            <Button
+              label={`Próxima: ${next.title}`}
+              icon="arrow-right"
+              variant={completed ? 'primary' : 'ghost'}
+              onPress={() => router.replace({ pathname: '/aula/[id]', params: { id: next.id } })}
+            />
           ) : (
             <Button label="Ver o curso completo" variant="ghost" onPress={() => router.replace({ pathname: '/curso/[id]', params: { id: course.id } })} />
           )
         ) : null}
       </View>
+
+      {state === 'open' ? <Notes lessonId={lesson.id} /> : null}
     </Screen>
   );
 }

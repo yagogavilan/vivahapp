@@ -80,7 +80,20 @@ do $$ declare blocked boolean; begin
   -- Agenda e diagnóstico.
   insert into public.agenda_events (title, kind, starts_at, ends_at) values ('Treino', 'treino', now(), now() + interval '30 min');
   insert into public.diagnostic_results (answers, scores, recommended_track) values ('{}', '{}', 'respira');
+  -- Atividade: o dia é sempre o de hoje (Brasília), mesmo se o app mandar outro.
+  insert into public.activity_log (kind, ref, day) values ('escudo', 'escudo-x', '2020-01-01');
+  assert (select day from public.activity_log where ref = 'escudo-x') = (now() at time zone 'America/Sao_Paulo')::date,
+    'atividade deveria ser registrada no dia de hoje';
+  -- Anotação só em aula liberada.
+  insert into public.lesson_notes (lesson_id, body) values ('protocolo-desligando-a-mente--m1--a1', 'Ruminar ≠ resolver');
+  blocked := false;
+  begin insert into public.lesson_notes (lesson_id, body) values ('mente-silenciosa--m1--a1', 'tentando'); exception when others then blocked := true; end;
+  assert blocked, 'anotação em aula bloqueada deveria falhar';
+  insert into public.favorites (item_type, item_id) values ('escudo', 'escudo-x');
+  update public.profiles set preferences = '{"showStreak": false}' where id = auth.uid();
+
   assert (public.export_my_data() -> 'perfil' ->> 'email') = 'bia@exemplo.com', 'exportação deveria trazer o perfil';
+  assert jsonb_array_length(public.export_my_data() -> 'anotacoes') = 1, 'exportação deveria trazer as anotações';
   assert jsonb_array_length(public.export_my_data() -> 'agenda') = 1, 'exportação deveria trazer a agenda';
 end $$;
 commit;
@@ -99,6 +112,9 @@ do $$ begin
   assert (select count(*) from public.entitlements) = 1, 'Ana deveria ver o próprio acesso';
   assert (select count(*) from public.agenda_events) = 0, 'Ana não deveria ver a agenda da Bia';
   assert (select count(*) from public.lesson_progress) = 0, 'Ana não deveria ver o progresso da Bia';
+  assert (select count(*) from public.activity_log) = 0, 'Ana não deveria ver a atividade da Bia';
+  assert (select count(*) from public.lesson_notes) = 0, 'Ana não deveria ver as anotações da Bia';
+  assert (select count(*) from public.favorites) = 0, 'Ana não deveria ver os favoritos da Bia';
   insert into public.posts (channel, body) values ('respira', 'Terminei o dia 7!');
   assert (select author_name from public.posts where body = 'Terminei o dia 7!') = 'Ana', 'nome do autor: primeiro nome';
   assert (select count(*) from public.posts_feed where channel = 'aquecimento') = 1, 'Ana deveria ver o post do aquecimento';

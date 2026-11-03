@@ -1,6 +1,7 @@
 import { requireSupabase } from '../lib/supabase';
 import type { Api, Catalog, ProfilePatch, SessionUser } from './api';
 import type {
+  Activity,
   AgendaEvent,
   Checkin,
   Comment,
@@ -30,6 +31,7 @@ const toProfile = (r: Row): Profile => ({
   goal: r.goal,
   healthConsentAt: r.health_consent_at,
   onboardedAt: r.onboarded_at,
+  preferences: r.preferences ?? {},
 });
 
 const toPost = (r: Row): Post => ({
@@ -104,6 +106,7 @@ export const supabaseApi: Api = {
     if ('goal' in patch) row.goal = patch.goal;
     if ('healthConsentAt' in patch) row.health_consent_at = patch.healthConsentAt;
     if ('onboardedAt' in patch) row.onboarded_at = patch.onboardedAt;
+    if ('preferences' in patch) row.preferences = patch.preferences;
     return toProfile(check(await requireSupabase().from('profiles').update(row).eq('id', id).select('*').single()) as Row);
   },
 
@@ -348,5 +351,51 @@ export const supabaseApi: Api = {
         note: c.note,
       }),
     );
+  },
+
+  async getActivity(days): Promise<Activity[]> {
+    const from = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+    const rows = check(
+      await requireSupabase().from('activity_log').select('day, kind, ref, minutes').gte('day', from).order('day', { ascending: false }),
+    ) as Row[];
+    return rows.map((r) => ({ day: r.day, kind: r.kind, ref: r.ref, minutes: r.minutes }));
+  },
+
+  async logActivity(kind, ref = '', minutes = 0) {
+    // O servidor grava o dia de hoje (Brasília); repetir a mesma atividade no dia não duplica.
+    const { error } = await requireSupabase()
+      .from('activity_log')
+      .upsert({ kind, ref, minutes }, { onConflict: 'user_id,day,kind,ref', ignoreDuplicates: true });
+    if (error) throw new Error(error.message);
+  },
+
+  async getNote(lessonId) {
+    const r = check(await requireSupabase().from('lesson_notes').select('body').eq('lesson_id', lessonId).maybeSingle()) as Row | null;
+    return r?.body ?? '';
+  },
+
+  async saveNote(lessonId, body) {
+    const sb = requireSupabase();
+    if (!body.trim()) {
+      check(await sb.from('lesson_notes').delete().eq('lesson_id', lessonId));
+      return;
+    }
+    const user_id = await currentUserId();
+    check(await sb.from('lesson_notes').upsert({ user_id, lesson_id: lessonId, body, updated_at: new Date().toISOString() }));
+  },
+
+  async getFavorites() {
+    const rows = check(await requireSupabase().from('favorites').select('*').order('created_at', { ascending: false })) as Row[];
+    return rows.map((r) => ({ itemType: r.item_type, itemId: r.item_id, createdAt: r.created_at }));
+  },
+
+  async setFavorite(itemType, itemId, on) {
+    const sb = requireSupabase();
+    if (on) {
+      const user_id = await currentUserId();
+      check(await sb.from('favorites').upsert({ user_id, item_type: itemType, item_id: itemId }));
+    } else {
+      check(await sb.from('favorites').delete().eq('item_type', itemType).eq('item_id', itemId));
+    }
   },
 };

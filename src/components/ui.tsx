@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { tap } from '../lib/haptics';
 import { colors, fonts, maxWidth, radius, shadow, space, type } from '../theme';
 
 export type IconName = ComponentProps<typeof Feather>['name'];
@@ -114,7 +115,10 @@ export function Button({
   const off = disabled || loading;
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
       disabled={off}
       accessibilityRole="button"
       accessibilityState={{ disabled: off, busy: loading }}
@@ -189,14 +193,18 @@ export function Field({ label, hint, ...props }: TextInputProps & { label: strin
   );
 }
 
-export function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+export function Chip({ label, selected, onPress, onDark }: { label: string; selected: boolean; onPress: () => void; onDark?: boolean }) {
+  const on = onDark ? { bg: colors.coral, text: colors.deep } : { bg: colors.petrol, text: colors.onDark };
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      style={[styles.chip, selected ? { backgroundColor: colors.petrol, borderColor: colors.petrol } : null]}>
-      <Text style={[styles.chipText, selected ? { color: colors.onDark } : null]}>{label}</Text>
+      style={[styles.chip, selected ? { backgroundColor: on.bg, borderColor: on.bg } : null]}>
+      <Text style={[styles.chipText, selected ? { color: on.text } : null]}>{label}</Text>
     </Pressable>
   );
 }

@@ -3,7 +3,7 @@
     "name": "Vivah",
     "slug": "vivah",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "vivah",
     "userInterfaceStyle": "light",
@@ -11,7 +11,9 @@
     "ios": {
       "bundleIdentifier": "br.com.vivah.app",
       "supportsTablet": true,
-      "config": { "usesNonExemptEncryption": false }
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "br.com.vivah.app",
@@ -49,7 +51,13 @@
           "enableBackgroundPlayback": true
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-notifications",
+        {
+          "color": "#124F58"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

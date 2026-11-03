@@ -35,7 +35,20 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 }
 export const radius = { sm: 10, md: 16, lg: 24, pill: 999 } as const;
 
 /** Largura máxima do conteúdo no desktop. */
-export const maxWidth = 960;
+export const maxWidth = 1120;
+
+/** A partir desta largura (web/tablet), o app usa menu lateral e duas colunas. */
+export const WIDE = 1024;
+
+/** Gradiente de capa por área da vida (tons da marca, sempre com texto claro por cima). */
+export const areaGradient = {
+  mente: ['#124F58', '#1F7480'],
+  tempo: ['#0F5560', '#2A8C7E'],
+  carreira: ['#0B2A30', '#24606B'],
+  financas: ['#164E4A', '#3A8F74'],
+  corpo: ['#7A3B2A', '#D06A48'],
+  alimentacao: ['#5E4A1E', '#B98A3A'],
+} as const;
 
 export const type = {
   hero: { fontFamily: fonts.display, fontSize: 32, lineHeight: 38, color: colors.text },

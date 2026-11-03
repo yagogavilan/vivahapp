@@ -1,5 +1,8 @@
 import type {
+  Activity,
+  ActivityKind,
   AgendaEvent,
+  Favorite,
   Checkin,
   Comment,
   Course,
@@ -31,7 +34,7 @@ export interface Catalog {
   products: Product[];
 }
 
-export type ProfilePatch = Partial<Pick<Profile, 'fullName' | 'goal' | 'healthConsentAt' | 'onboardedAt'>>;
+export type ProfilePatch = Partial<Pick<Profile, 'fullName' | 'goal' | 'healthConsentAt' | 'onboardedAt' | 'preferences'>>;
 
 /** Tudo o que o app pede ao backend. Há duas implementações: Supabase e demonstração. */
 export interface Api {
@@ -74,4 +77,15 @@ export interface Api {
 
   getCheckins(days: number): Promise<Checkin[]>;
   saveCheckin(checkin: Checkin): Promise<void>;
+
+  /** Atividade dos últimos `days` dias (sequência, plano do dia e conquistas). */
+  getActivity(days: number): Promise<Activity[]>;
+  /** Registra uma atividade de hoje. Repetir a mesma atividade no dia não duplica. */
+  logActivity(kind: ActivityKind, ref?: string, minutes?: number): Promise<void>;
+
+  getNote(lessonId: string): Promise<string>;
+  saveNote(lessonId: string, body: string): Promise<void>;
+
+  getFavorites(): Promise<Favorite[]>;
+  setFavorite(itemType: Favorite['itemType'], itemId: string, on: boolean): Promise<void>;
 }

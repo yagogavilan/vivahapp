@@ -7,6 +7,7 @@ import { dayKey, formatDayLabel, formatTime } from '@/domain/dates';
 import { agendaDays } from '@/domain/schedule';
 import { AGENDA_KIND as KIND } from '@/lib/agenda-kinds';
 import { confirm } from '@/lib/dialogs';
+import { cancelLiveReminder } from '@/lib/reminders';
 import { colors, space } from '@/theme';
 
 export default function Agenda() {
@@ -57,7 +58,10 @@ export default function Agenda() {
                       accessibilityRole="button"
                       accessibilityLabel={`Remover ${item.title}`}
                       onPress={async () => {
-                        if (await confirm('Remover da agenda?', item.title, 'Remover', true)) remove.mutate(item.eventId!);
+                        if (await confirm('Remover da agenda?', item.title, 'Remover', true)) {
+                          remove.mutate(item.eventId!);
+                          if (item.liveId) cancelLiveReminder(item.liveId).catch(() => undefined);
+                        }
                       }}>
                       <Icon name="x" size={18} color={colors.textSubtle} />
                     </Pressable>

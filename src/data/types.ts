@@ -152,6 +152,15 @@ export interface Checkin {
   note: string | null;
 }
 
+export interface Preferences {
+  /** Lembrete diário do Escudo Anticrise, "07:30"; null = desligado. */
+  dailyReminder?: string | null;
+  /** Lembrete 15 min antes das lives salvas na agenda. */
+  liveReminders?: boolean;
+  /** Mostrar a sequência de dias na tela Hoje. */
+  showStreak?: boolean;
+}
+
 export interface Profile {
   id: string;
   email: string;
@@ -159,6 +168,22 @@ export interface Profile {
   goal: string | null;
   healthConsentAt: string | null;
   onboardedAt: string | null;
+  preferences: Preferences;
+}
+
+export type ActivityKind = 'escudo' | 'aula' | 'checkin' | 'live' | 'foco' | 'diagnostico' | 'post';
+
+export interface Activity {
+  day: string;
+  kind: ActivityKind;
+  ref: string;
+  minutes: number;
+}
+
+export interface Favorite {
+  itemType: 'lesson' | 'escudo';
+  itemId: string;
+  createdAt: string;
 }
 
 export interface LessonProgress {

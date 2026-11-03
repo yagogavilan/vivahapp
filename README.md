@@ -14,6 +14,22 @@ Este é o **MVP de 01/12/2026**:
 - **Check-in de humor e sono:** só com consentimento (dado de saúde, LGPD art. 11).
 - **Privacidade:** o aluno exporta os próprios dados e apaga a conta dentro do app, como as lojas exigem.
 
+### Engajamento (versão 2, baseada em referências de mercado)
+
+Inspirado em Headspace, Duolingo, Calm e no player da Hotmart (e nas reclamações dos alunos sobre ele):
+
+- **Plano do dia na tela Hoje:** 3 passos curtos (Escudo, uma aula, check-in) que mudam à noite (a partir das 18h de Brasília) para "Desacelere em poucos minutos". Anel de progresso e atalhos "Acalmar agora · Focar · Dormir melhor".
+- **Sequência de dias gentil:** qualquer atividade conta (Escudo, aula, check-in, foco, live, post), há 1 dia de folga por semana e o aluno pode esconder a contagem em *Lembretes e sequência*. Sem mensagens de culpa.
+- **Conquistas e certificados:** 11 conquistas (primeira aula, 7 dias, curso concluído…), marcos de 25/50/75% no curso e certificado do curso concluído.
+- **Player melhor:** velocidade 0,75× a 2× no vídeo e no áudio, anotações privadas por aula, favoritos (aulas e Escudos) e "Continue de onde parou" em carrossel.
+- **Busca** em trilhas, cursos, aulas e Escudos, sem acento e sem maiúsculas.
+- **Bloco de foco** (15/25/50 min) que registra o tempo no dia do aluno.
+- **Lembretes no celular:** Escudo diário no horário escolhido e aviso 15 min antes da live salva na agenda. Tocar no aviso abre a tela certa. Exigem *development build* ou build das lojas (o Expo Go não mostra notificações agendadas no Android). Na web a tela explica que é só no app.
+- **Desktop e tablet de verdade:** menu lateral e duas colunas a partir de 1024 px. O app da Hotmart é criticado justamente por abrir "como celular" no iPad e no Mac.
+- **Acabamento:** capas em degradê por trilha, esqueletos de carregamento, animações de entrada e vibração leve nos toques.
+
+Tabelas novas (migração `20261103000000_engajamento.sql`): `activity_log` (o dia é sempre o de Brasília, gravado pelo banco), `lesson_notes` (só em aula liberada), `favorites` e `profiles.preferences`. Todas com RLS e incluídas na exportação de dados.
+
 ## Vendas: só na web, nunca dentro dos apps das lojas
 
 O app da Apple Store e da Play Store **não vende nada**: não mostra preço, botão nem link para comprar fora da loja. Assim não há comissão da Apple ou do Google e o app passa na revisão.
@@ -114,9 +130,12 @@ src/app/                 telas (Expo Router)
   trilha/ curso/ aula/   trilha → curso → aula
   live/ escudo/ post/    Área de Aquecimento e comunidade
   entrar, boas-vindas, diagnostico, checkin, evento, privacidade
+  foco, buscar, conquistas, lembretes, favoritos, certificado/
 src/components/          componentes visuais (ui, players, vitrine, painel bloqueado)
 src/data/                catálogo, tipos, API (Supabase e demonstração) e hooks
-src/domain/              regras sem tela: acesso, datas de Brasília, agenda, diagnóstico
+src/domain/              regras sem tela: acesso, datas de Brasília, agenda, diagnóstico,
+                         sequência, conquistas, plano do dia e busca
+src/lib/                 lembretes (notificações locais), vibração, configuração
 supabase/migrations/     banco, funções e RLS
 supabase/functions/      webhook da Hotmart e exclusão de conta (Deno)
 supabase/tests/          testes das regras de acesso
@@ -128,14 +147,14 @@ tests/                   testes das regras de negócio e do webhook
 ```bash
 npm run typecheck   # TypeScript
 npx expo lint       # ESLint
-npm test            # regras de acesso, datas, agenda, diagnóstico e webhook da Hotmart
+npm test            # acesso, datas, agenda, diagnóstico, sequência, conquistas, busca e webhook da Hotmart
 npm run db:test     # migração + seed + RLS num Postgres local (PGPASSWORD=... se precisar)
 ```
 
 ## Próximos passos (fora do MVP)
 
 - Acompanhamentos de treino, peso, refeições, gastos, foco e carreira, e o painel **Minha evolução** (V1–V3 do plano).
-- Notificações push (lembrete da live, Escudo do dia).
+- Push enviado pelo servidor (ex.: "a live começou agora" para todos). Os lembretes locais já estão prontos.
 - Painel administrativo próprio (hoje é o Table Editor do Supabase).
 - Assinatura recorrente: o webhook já trata `SUBSCRIPTION_CANCELLATION`. Falta definir se o acesso cai na hora ou no fim do ciclo pago.
 

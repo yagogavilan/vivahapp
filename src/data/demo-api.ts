@@ -7,7 +7,7 @@ import { addDays, dayKey, spDateTime } from '../domain/dates';
 import { buildEscudo, buildLives } from '../domain/schedule';
 import type { Api, SessionUser } from './api';
 import { courses, diagnosticQuestions, lessonMedia, lessons, modules, products, tracks } from './catalog';
-import type { AgendaEvent, Checkin, Comment, DiagnosticResult, LessonProgress, Post, Profile } from './types';
+import type { Activity, AgendaEvent, Checkin, Comment, DiagnosticResult, Favorite, LessonProgress, Post, Profile } from './types';
 
 const wait = (ms = 150) => new Promise((r) => setTimeout(r, ms));
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -38,6 +38,10 @@ function initialState() {
     ] as AgendaEvent[],
     diagnostic: null as DiagnosticResult | null,
     checkins: [] as Checkin[],
+    // Uma semana de exemplo: 4 dias seguidos até ontem, para a sequência aparecer.
+    activity: [1, 2, 3, 4].map((d) => ({ day: addDays(t, -d), kind: 'escudo' as const, ref: `escudo-${addDays(t, -d)}`, minutes: 5 })) as Activity[],
+    notes: {} as Record<string, string>,
+    favorites: [] as Favorite[],
   };
 }
 
@@ -71,7 +75,7 @@ export const demoApi: Api = {
     if (code.trim() !== DEMO_CODE) throw new Error(`No modo demonstração, o código é ${DEMO_CODE}.`);
     const fresh = initialState();
     state = { ...fresh, user: { id: 'demo-user', email: email.trim().toLowerCase() } };
-    state.profile = { id: 'demo-user', email: state.user!.email, fullName: null, goal: null, healthConsentAt: null, onboardedAt: null };
+    state.profile = { id: 'demo-user', email: state.user!.email, fullName: null, goal: null, healthConsentAt: null, onboardedAt: null, preferences: { showStreak: true, liveReminders: true, dailyReminder: null } };
     emit();
   },
   async signOut() {
@@ -103,6 +107,9 @@ export const demoApi: Api = {
       agenda: state.agenda,
       diagnosticos: state.diagnostic ? [state.diagnostic] : [],
       checkins: state.checkins,
+      anotacoes: state.notes,
+      favoritos: state.favorites,
+      atividade: state.activity,
       publicacoes: state.posts.filter((p) => p.authorId === state.user?.id),
     };
   },
@@ -200,5 +207,28 @@ export const demoApi: Api = {
   async saveCheckin(c) {
     if (!state.profile?.healthConsentAt) throw new Error('Ative o acompanhamento de humor e sono primeiro.');
     state.checkins = [...state.checkins.filter((x) => x.day !== c.day), c];
+  },
+
+  async getActivity(days) {
+    const from = addDays(today(), -days);
+    return state.activity.filter((a) => a.day >= from);
+  },
+  async logActivity(kind, ref = '', minutes = 0) {
+    const day = today();
+    if (state.activity.some((a) => a.day === day && a.kind === kind && a.ref === ref)) return;
+    state.activity = [...state.activity, { day, kind, ref, minutes }];
+  },
+  async getNote(lessonId) {
+    return state.notes[lessonId] ?? '';
+  },
+  async saveNote(lessonId, body) {
+    state.notes = { ...state.notes, [lessonId]: body };
+  },
+  async getFavorites() {
+    return [...state.favorites];
+  },
+  async setFavorite(itemType, itemId, on) {
+    state.favorites = state.favorites.filter((f) => !(f.itemType === itemType && f.itemId === itemId));
+    if (on) state.favorites = [{ itemType, itemId, createdAt: new Date().toISOString() }, ...state.favorites];
   },
 };

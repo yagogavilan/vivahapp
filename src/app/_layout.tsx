@@ -7,7 +7,8 @@ import {
 } from '@expo-google-fonts/nunito-sans';
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -16,6 +17,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/auth/session';
 import { Loading } from '@/components/ui';
+import { REMINDERS_SUPPORTED } from '@/lib/reminders';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -49,6 +51,16 @@ function RootNavigator() {
     if (status !== 'loading') SplashScreen.hideAsync().catch(() => undefined);
   }, [status]);
 
+  // Tocar num lembrete abre a tela certa (Escudo do dia, live).
+  useEffect(() => {
+    if (!REMINDERS_SUPPORTED || !signedIn) return;
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const url = response.notification.request.content.data?.url;
+      if (typeof url === 'string') router.push(url as never);
+    });
+    return () => sub.remove();
+  }, [signedIn]);
+
   if (status === 'loading') return <Loading />;
 
   return (
@@ -71,6 +83,12 @@ function RootNavigator() {
         <Stack.Screen name="checkin" options={{ ...detailHeader, presentation: 'modal' }} />
         <Stack.Screen name="evento" options={{ ...detailHeader, presentation: 'modal' }} />
         <Stack.Screen name="privacidade" options={detailHeader} />
+        <Stack.Screen name="foco" options={detailHeader} />
+        <Stack.Screen name="buscar" options={detailHeader} />
+        <Stack.Screen name="conquistas" options={detailHeader} />
+        <Stack.Screen name="lembretes" options={detailHeader} />
+        <Stack.Screen name="favoritos" options={detailHeader} />
+        <Stack.Screen name="certificado/[id]" options={detailHeader} />
       </Stack.Protected>
     </Stack>
   );

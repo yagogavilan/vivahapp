@@ -3,8 +3,9 @@ import { useMemo } from 'react';
 
 import { useSession } from '../auth/session';
 import { courseState, type CourseState } from '../domain/access';
+import { computeStreak } from '../domain/streak';
 import { api } from './index';
-import type { AgendaEvent, Checkin, Course, LifeArea, Track } from './types';
+import type { ActivityKind, AgendaEvent, Checkin, Course, Favorite, LifeArea, Track } from './types';
 
 /** Chaves de cache por usuário, para nunca misturar dados de contas diferentes. */
 function useKey(...parts: unknown[]) {
@@ -93,7 +94,13 @@ export function useCommunityMutations() {
   const base = useKey();
   const refresh = () => qc.invalidateQueries({ queryKey: base });
   return {
-    createPost: useMutation({ mutationFn: (v: { channel: string; body: string }) => api.createPost(v.channel, v.body), onSuccess: refresh }),
+    createPost: useMutation({
+      mutationFn: async (v: { channel: string; body: string }) => {
+        await api.createPost(v.channel, v.body);
+        await api.logActivity('post', v.channel).catch(() => undefined);
+      },
+      onSuccess: refresh,
+    }),
     deletePost: useMutation({ mutationFn: (id: string) => api.deletePost(id), onSuccess: refresh }),
     createComment: useMutation({ mutationFn: (v: { postId: string; body: string }) => api.createComment(v.postId, v.body), onSuccess: refresh }),
   };
@@ -156,5 +163,63 @@ export function useUpdateProfile() {
       qc.setQueryData(['profile', user?.id], profile);
       qc.invalidateQueries({ queryKey: [user?.id ?? 'anon', 'checkins'] });
     },
+  });
+}
+
+// ——— Engajamento ———
+
+export function useActivity(days = 120) {
+  const key = useKey('activity', days);
+  return useQuery({ queryKey: key, queryFn: () => api.getActivity(days) });
+}
+
+/** Registra atividade e atualiza sequência, plano do dia e conquistas. */
+export function useLogActivity() {
+  const qc = useQueryClient();
+  const base = useKey('activity');
+  return useMutation({
+    mutationFn: (v: { kind: ActivityKind; ref?: string; minutes?: number }) => api.logActivity(v.kind, v.ref, v.minutes),
+    onSuccess: () => qc.invalidateQueries({ queryKey: base }),
+  });
+}
+
+export function useStreak() {
+  const activity = useActivity();
+  return useMemo(() => (activity.data ? computeStreak(activity.data) : undefined), [activity.data]);
+}
+
+export function useNote(lessonId: string | undefined) {
+  const key = useKey('note', lessonId);
+  return useQuery({ queryKey: key, queryFn: () => api.getNote(lessonId!), enabled: Boolean(lessonId) });
+}
+
+export function useSaveNote() {
+  const qc = useQueryClient();
+  const base = useKey('note');
+  return useMutation({
+    mutationFn: (v: { lessonId: string; body: string }) => api.saveNote(v.lessonId, v.body),
+    onSuccess: (_d, v) => qc.setQueryData([...base, v.lessonId], v.body),
+  });
+}
+
+export function useFavorites() {
+  const key = useKey('favorites');
+  return useQuery({ queryKey: key, queryFn: () => api.getFavorites() });
+}
+
+export function useToggleFavorite() {
+  const qc = useQueryClient();
+  const key = useKey('favorites');
+  return useMutation({
+    mutationFn: (v: { itemType: Favorite['itemType']; itemId: string; on: boolean }) => api.setFavorite(v.itemType, v.itemId, v.on),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<Favorite[]>(key) ?? [];
+      const next = prev.filter((f) => !(f.itemType === v.itemType && f.itemId === v.itemId));
+      qc.setQueryData(key, v.on ? [{ itemType: v.itemType, itemId: v.itemId, createdAt: new Date().toISOString() }, ...next] : next);
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => ctx && qc.setQueryData(key, ctx.prev),
+    onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
 }

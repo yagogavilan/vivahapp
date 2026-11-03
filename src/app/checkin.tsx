@@ -4,7 +4,8 @@ import { Pressable, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { Button, Card, Field, Icon, Loading, Row, Screen, Txt } from '@/components/ui';
-import { useCheckins, useSaveCheckin } from '@/data/hooks';
+import { useCheckins, useLogActivity, useSaveCheckin } from '@/data/hooks';
+import { success } from '@/lib/haptics';
 import type { Checkin } from '@/data/types';
 import { dayKey } from '@/domain/dates';
 import { colors, fonts, radius, space } from '@/theme';
@@ -64,6 +65,7 @@ export default function CheckinScreen() {
 
 function CheckinForm({ today, existing }: { today: string; existing?: Checkin }) {
   const save = useSaveCheckin();
+  const log = useLogActivity();
   const [mood, setMood] = useState(existing?.mood ?? 3);
   const [energy, setEnergy] = useState(existing?.energy ?? 3);
   const [sleepHours, setSleepHours] = useState(existing?.sleepHours ?? 7);
@@ -112,6 +114,8 @@ function CheckinForm({ today, existing }: { today: string; existing?: Checkin })
           setError(null);
           try {
             await save.mutateAsync({ day: today, mood, energy, sleepHours, sleepQuality, note: note.trim() || null });
+            log.mutate({ kind: 'checkin', minutes: 1 });
+            success();
             router.back();
           } catch (e) {
             setError((e as Error).message);

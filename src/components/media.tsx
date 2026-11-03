@@ -1,7 +1,7 @@
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { colors, radius, space } from '../theme';
@@ -14,6 +14,38 @@ const fmt = (sec: number) => {
 
 let audioModeSet = false;
 
+const RATES = [0.75, 1, 1.25, 1.5, 2];
+
+/** Velocidade de reprodução (o player do Hotmart também oferece; aqui vale para áudio e vídeo). */
+function SpeedControl({ rate, onChange, dark }: { rate: number; onChange: (r: number) => void; dark: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }} accessibilityLabel="Velocidade de reprodução">
+      {RATES.map((r) => {
+        const on = r === rate;
+        return (
+          <Pressable
+            key={r}
+            onPress={() => onChange(r)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 999,
+              borderWidth: 1.5,
+              borderColor: on ? colors.coral : dark ? colors.petrol : colors.border,
+              backgroundColor: on ? colors.coral : 'transparent',
+            }}>
+            <Txt variant="small" style={{ fontSize: 13, color: on ? colors.deep : dark ? colors.onDarkMuted : colors.textSubtle }}>
+              {String(r).replace('.', ',')}x
+            </Txt>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 /** Player de áudio com tocar/pausar, voltar 15 s e barra de progresso. */
 export function AudioPlayer({
   url,
@@ -21,6 +53,7 @@ export function AudioPlayer({
   startAt = 0,
   onProgress,
   onFinish,
+  onPlay,
   tone = 'dark',
 }: {
   url: string;
@@ -28,9 +61,13 @@ export function AudioPlayer({
   startAt?: number;
   onProgress?: (positionSec: number) => void;
   onFinish?: () => void;
+  /** Primeira vez que o aluno aperta play (registra a atividade do dia). */
+  onPlay?: () => void;
   tone?: 'dark' | 'light';
 }) {
   const player = useAudioPlayer(url, { updateInterval: 1000 });
+  const [rate, setRate] = useState(1);
+  const played = useRef(false);
   const status = useAudioPlayerStatus(player);
   const lastSaved = useRef(0);
   const finished = useRef(false);
@@ -68,7 +105,16 @@ export function AudioPlayer({
       if (status.duration > 0 && status.currentTime >= status.duration - 0.5) player.seekTo(0).catch(() => undefined);
       player.setActiveForLockScreen?.(true, { title, artist: 'Vivah' });
       player.play();
+      if (!played.current) {
+        played.current = true;
+        onPlay?.();
+      }
     }
+  };
+
+  const changeRate = (r: number) => {
+    setRate(r);
+    player.setPlaybackRate(r);
   };
 
   const dark = tone === 'dark';
@@ -99,6 +145,9 @@ export function AudioPlayer({
           </Txt>
         </View>
       </View>
+      <View style={{ marginTop: space.md }}>
+        <SpeedControl rate={rate} onChange={changeRate} dark={dark} />
+      </View>
     </View>
   );
 }
@@ -109,13 +158,17 @@ export function VideoPlayer({
   startAt = 0,
   onProgress,
   onFinish,
+  onPlay,
 }: {
   url: string;
   startAt?: number;
   onProgress?: (positionSec: number) => void;
   onFinish?: () => void;
+  onPlay?: () => void;
 }) {
   const lastSaved = useRef(0);
+  const played = useRef(false);
+  const [rate, setRate] = useState(1);
   const player = useVideoPlayer(url, (p) => {
     p.timeUpdateEventInterval = 5;
     if (startAt > 0) p.currentTime = startAt;
@@ -128,14 +181,35 @@ export function VideoPlayer({
     }
   });
   useEventListener(player, 'playToEnd', () => onFinish?.());
+  useEventListener(player, 'playingChange', ({ isPlaying }) => {
+    if (isPlaying && !played.current) {
+      played.current = true;
+      onPlay?.();
+    }
+  });
 
   useEffect(() => () => onProgress?.(player.currentTime), [player, onProgress]);
 
   return (
-    <View style={styles.video}>
-      <VideoView player={player} style={StyleSheet.absoluteFill} nativeControls contentFit="contain" fullscreenOptions={{ enable: true }} />
+    <View style={{ gap: space.sm }}>
+      <View style={styles.video}>
+        <VideoView player={player} style={StyleSheet.absoluteFill} nativeControls contentFit="contain" fullscreenOptions={{ enable: true }} />
+      </View>
+      <SpeedControl
+        rate={rate}
+        dark={false}
+        onChange={(r) => {
+          setRate(r);
+          applyRate(player, r);
+        }}
+      />
     </View>
   );
+}
+
+/** Fora do componente: o React Compiler não aceita mutar o retorno de um hook dentro do render. */
+function applyRate(player: { playbackRate: number }, rate: number) {
+  player.playbackRate = rate;
 }
 
 /** Quando o vídeo ou o áudio ainda não foi cadastrado. */

@@ -5,7 +5,7 @@ import { Pressable, View } from 'react-native';
 import { DiagnosticBars } from '@/components/charts';
 import { Button, Card, ErrorState, Icon, Loading, ProgressBar, Row, Screen, Txt } from '@/components/ui';
 import { AREA_LABEL } from '@/data/catalog';
-import { useDiagnosticQuestions, useLibrary, useSaveDiagnostic } from '@/data/hooks';
+import { useDiagnosticQuestions, useLibrary, useLogActivity, useSaveDiagnostic } from '@/data/hooks';
 import type { LifeArea } from '@/data/types';
 import { recommendationCopy, recommendTrack, scoreDiagnostic } from '@/domain/diagnostic';
 import { colors, radius, space } from '@/theme';
@@ -14,6 +14,7 @@ export default function Diagnostico() {
   const questions = useDiagnosticQuestions();
   const library = useLibrary();
   const save = useSaveDiagnostic();
+  const log = useLogActivity();
   const [step, setStep] = useState(-1);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<{ scores: Record<LifeArea, number>; trackId: string } | null>(null);
@@ -33,6 +34,7 @@ export default function Diagnostico() {
     const trackId = recommendTrack(scores);
     setResult({ scores, trackId });
     save.mutate({ answers: next, scores, trackId });
+    log.mutate({ kind: 'diagnostico', minutes: 3 });
   }
 
   if (result) {
