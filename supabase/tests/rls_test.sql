@@ -490,6 +490,122 @@ do $$ begin
   assert (select count(*) from public.tracks where status = 'live') = 6, 'todas as trilhas no ar';
 end $$;
 
+-- ——— Notificações: tokens, preferências, público e caixa de avisos ———
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000000e1', 'eva.push@exemplo.com', '{"full_name":"Eva Rocha"}'),
+  ('00000000-0000-0000-0000-0000000000e2', 'gil.push@exemplo.com', '{"full_name":"Gil Prado"}');
+insert into public.entitlements (email, course_id, product_id, hotmart_transaction)
+select 'eva.push@exemplo.com', pc.course_id, pc.product_id, 'HP-EVA' from public.product_courses pc where pc.product_id = 'trilha-move';
+
+-- Eva (assina a Move) registra o celular; Gil registra o dele e desliga os avisos da Move.
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000e1","email":"eva.push@exemplo.com","role":"authenticated"}';
+select public.register_push_token('ExponentPushToken[eva-1]', 'ios');
+do $$ declare blocked boolean := false; begin
+  begin insert into public.push_tokens (token, user_id, platform) values ('ExponentPushToken[x]', '00000000-0000-0000-0000-0000000000e2', 'ios');
+  exception when others then blocked := true; end;
+  assert blocked, 'ninguém grava token direto na tabela nem em nome de outra pessoa';
+  blocked := false;
+  begin perform public.register_push_token('token-invalido', 'ios'); exception when others then blocked := true; end;
+  assert blocked, 'token fora do formato da Expo é recusado';
+  blocked := false;
+  begin insert into public.notifications (kind, title, body, audience) values ('announcement', 'Oi', 'Teste', 'all');
+  exception when others then blocked := true; end;
+  assert blocked, 'aluna não cria aviso';
+  blocked := false;
+  begin perform * from public.notification_reach('announcement', 'all', null, null); exception when others then blocked := true; end;
+  assert blocked, 'aluna não vê o alcance dos avisos';
+  blocked := false;
+  begin perform * from public.dispatch_notification(gen_random_uuid()); exception when others then blocked := true; end;
+  assert blocked, 'aluna não dispara aviso';
+  insert into public.notification_settings (launches) values (true);
+  assert (select launches_consent_at from public.notification_settings where user_id = auth.uid()) is not null,
+    'aceitar lançamentos grava a data do consentimento';
+end $$;
+commit;
+
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000e2","email":"gil.push@exemplo.com","role":"authenticated"}';
+select public.register_push_token('ExponentPushToken[gil-1]', 'android');
+-- O mesmo celular passa para o Gil quando ele entra nele.
+select public.register_push_token('ExponentPushToken[eva-1]', 'android');
+insert into public.notification_settings (muted_tracks) values (array['move', 'MOVE!', 'move']);
+do $$ begin
+  assert (select count(*) from public.push_tokens) = 2, 'Gil só vê os próprios aparelhos';
+  assert (select muted_tracks from public.notification_settings where user_id = auth.uid()) = array['move'],
+    'trilhas silenciadas sem repetição nem lixo';
+  assert (select count(*) from public.notification_settings) = 1, 'Gil não vê as preferências da Eva';
+end $$;
+commit;
+-- Eva entra de novo no celular dela.
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000e1","email":"eva.push@exemplo.com","role":"authenticated"}';
+select public.register_push_token('ExponentPushToken[eva-1]', 'ios');
+commit;
+
+-- Admin cria três avisos e vê o alcance antes de enviar.
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000ad","email":"admin@vivah.com.br","role":"authenticated"}';
+insert into public.notifications (id, kind, title, body, url, audience, track_id) values
+  ('00000000-0000-0000-0000-00000000a001', 'announcement', 'Live hoje às 20h', 'Respiração para dormir melhor', '/avisos', 'track', 'move'),
+  ('00000000-0000-0000-0000-00000000a002', 'announcement', 'Novidade no app', 'Agora você escolhe os avisos que recebe', null, 'all', null);
+insert into public.notifications (id, kind, title, body, url, audience, track_id, course_id) values
+  ('00000000-0000-0000-0000-00000000a003', 'launch', 'Ficha de treino nova', 'Monte seus treinos da semana', '/curso/ficha-de-treino', 'all', 'move', null);
+do $$ declare r record; blocked boolean := false; begin
+  select * into r from public.notification_reach('announcement', 'track', 'move', null);
+  assert r.recipients = 1 and r.push_targets = 1, format('aviso da Move: só a Eva assina (veio %s/%s)', r.recipients, r.push_targets);
+  begin insert into public.notifications (kind, title, body, audience, status) values ('announcement', 'Oi oi', 'Teste', 'all', 'sent');
+  exception when others then blocked := true; end;
+  assert blocked, 'o admin não marca aviso como enviado sem enviar';
+  blocked := false;
+  begin insert into public.notifications (kind, title, body, audience) values ('announcement', 'Oi oi', 'Teste', 'track');
+  exception when others then blocked := true; end;
+  assert blocked, 'aviso para trilha precisa dizer qual trilha';
+end $$;
+commit;
+
+-- A função de envio (service role) entrega.
+begin;
+set local role service_role;
+do $$ declare tokens text[]; begin
+  tokens := array(select token from public.dispatch_notification('00000000-0000-0000-0000-00000000a001'));
+  assert tokens = array['ExponentPushToken[eva-1]'], format('push da Move só para a Eva, veio %s', tokens);
+  tokens := array(select token from public.dispatch_notification('00000000-0000-0000-0000-00000000a002'));
+  assert 'ExponentPushToken[gil-1]' = any (tokens) and 'ExponentPushToken[eva-1]' = any (tokens), 'aviso geral vai para os dois';
+  tokens := array(select token from public.dispatch_notification('00000000-0000-0000-0000-00000000a003'));
+  assert tokens = array['ExponentPushToken[eva-1]'], 'lançamento só para quem aceitou (Eva), e o Gil silenciou a Move';
+  assert (select recipients from public.notifications where id = '00000000-0000-0000-0000-00000000a002') = (select count(*) from public.profiles),
+    'o aviso geral entra na caixa de todo mundo';
+  begin perform public.dispatch_notification('00000000-0000-0000-0000-00000000a001'); assert false, 'não reenviar';
+  exception when raise_exception then null; end;
+end $$;
+commit;
+
+-- Caixa de avisos do Gil: recebeu o geral e o lançamento (na caixa, sem push), não o da Move.
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000e2","email":"gil.push@exemplo.com","role":"authenticated"}';
+do $$ begin
+  assert (select count(*) from public.my_inbox()) = 2, 'Gil tem 2 avisos na caixa';
+  assert (select count(*) from public.my_inbox() where read_at is null) = 2, 'os dois não lidos';
+  perform public.mark_notifications_read(array['00000000-0000-0000-0000-00000000a002'::uuid]);
+  assert (select count(*) from public.my_inbox() where read_at is null) = 1, 'marcar um como lido';
+  assert (select count(*) from public.user_notifications) = 2, 'Gil só vê a própria caixa';
+  assert (public.export_my_data() -> 'avisos_recebidos') is not null, 'os avisos entram na exportação LGPD';
+end $$;
+commit;
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000ad","email":"admin@vivah.com.br","role":"authenticated"}';
+do $$ begin
+  assert (select opened from public.admin_notifications() where id = '00000000-0000-0000-0000-00000000a002') = 1, 'o admin vê quantos abriram';
+end $$;
+commit;
+
 -- ——— Apagar a conta remove os dados pessoais em cascata ———
 delete from auth.users where id = '00000000-0000-0000-0000-00000000000b';
 do $$ begin

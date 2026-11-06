@@ -3,6 +3,7 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useState
 
 import { api, type SessionUser } from '../data';
 import type { Profile } from '../data/types';
+import { unregisterDevice } from '../lib/push';
 
 type Status = 'loading' | 'signedOut' | 'signedIn';
 
@@ -52,7 +53,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       profile: profile.data,
       onboarded: Boolean(profile.data?.onboardedAt),
       auth: api,
-      signOut: () => api.signOut(),
+      signOut: async () => {
+        // Este celular deixa de receber os avisos da conta que saiu.
+        await unregisterDevice();
+        await api.signOut();
+      },
     };
   }, [user, profile.data, profile.isPending, profile.isError]);
 

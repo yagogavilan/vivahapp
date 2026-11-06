@@ -13,6 +13,7 @@ import { deriveProducts } from '../domain/admin';
 import { sequenceInfo, trackSequence } from '../domain/sequence';
 import { judgeContribution } from '../../supabase/functions/_shared/contribution';
 import { levelFor } from '../domain/kindness';
+import { categoryOf, DEFAULT_PUSH_SETTINGS, pushCopyIssues, wantsPush } from '../domain/notifications';
 import { RULES } from '../domain/points';
 import { TRACK_REWARDS } from '../domain/rewards';
 import { award, type AwardInput, type LedgerEvent, statsOf } from './demo-points';
@@ -31,7 +32,11 @@ import type {
   Profile,
   ReactionKind,
   DailyLog,
+  InboxItem,
+  NotificationDraft,
+  PushSettings,
   Redemption,
+  SentNotification,
   SupportAction,
 } from './types';
 import { communitySeed, DEMO_PEOPLE, type DemoComment, type DemoPost } from './demo-community';
@@ -72,6 +77,9 @@ function initialState() {
     notes: {} as Record<string, string>,
     favorites: [] as Favorite[],
     trackEntries: [] as Entry[],
+    pushSettings: { ...DEFAULT_PUSH_SETTINGS } as PushSettings,
+    pushTokens: [] as string[],
+    inboxRead: new Set<string>(),
   };
 }
 
@@ -98,6 +106,43 @@ function upsert<T extends { id: string }>(list: T[], item: T) {
   else list.push(item);
 }
 const listeners = new Set<(u: SessionUser | null) => void>();
+
+/**
+ * Avisos enviados na demonstração (valem para todas as contas: o admin envia,
+ * a aluna vê no sino). Dois de exemplo, para o histórico não começar vazio.
+ */
+const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+const sentNotifications: SentNotification[] = [
+  {
+    id: 'demo-n1', kind: 'announcement', title: 'Live de quinta às 20h', body: 'Respiração para dormir melhor, com a equipe Vivah. Salve na agenda.',
+    url: '/agenda', audience: 'all', trackId: null, courseId: null, lessonId: null, status: 'sent', createdAt: ago(26), sentAt: ago(26),
+    recipients: 5240, pushTargets: 3150, pushOk: 3122, pushFailed: 28, opened: 1408, error: null,
+  },
+  {
+    id: 'demo-n2', kind: 'lesson', title: 'Aula nova na Respira: O que é ruminação', body: 'Já está no curso Mente Silenciosa. Toque para assistir.',
+    url: '/aula/mente-silenciosa--m1--a1', audience: 'course', trackId: 'respira', courseId: 'mente-silenciosa', lessonId: 'mente-silenciosa--m1--a1',
+    status: 'sent', createdAt: ago(3), sentAt: ago(3), recipients: 1310, pushTargets: 812, pushOk: 809, pushFailed: 3, opened: 377, error: null,
+  },
+];
+
+/** Na demonstração, o celular mostra o aviso como notificação local (o app registra quem mostra). */
+let presentDemoPush: ((n: { title: string; body: string; url: string | null; id: string }) => void) | null = null;
+export function setDemoPushPresenter(fn: typeof presentDemoPush) {
+  presentDemoPush = fn;
+}
+
+/** Público simulado (a demonstração tem uma pessoa só). */
+const DEMO_REACH = { all: 5240, track: 1310, course: 870 } as const;
+const DEMO_OPT_IN = { new_lessons: 0.62, announcements: 0.6, launches: 0.21 } as const;
+
+function inAudience(n: Pick<SentNotification, 'audience' | 'trackId' | 'courseId'>): boolean {
+  if (n.audience === 'all') return true;
+  if (n.audience === 'track') {
+    return cat.courses.some((c) => c.trackId === n.trackId && !c.lowTicket && state.owned.has(c.id));
+  }
+  const course = cat.courses.find((c) => c.id === n.courseId);
+  return Boolean(course && (course.isFree || state.owned.has(course.id)));
+}
 const emit = () => listeners.forEach((l) => l(state.user));
 
 function me(): SessionUser {
@@ -819,5 +864,72 @@ export const demoApi: Api = {
     const value = Math.max(0, delta);
     state.trackEntries.push({ id: uid(), trackId, metric, day, key: '', value, data: {}, createdAt: new Date().toISOString() });
     return value;
+  },
+  async registerPushToken(token) {
+    await wait(30);
+    if (!state.pushTokens.includes(token)) state.pushTokens.push(token);
+  },
+  async unregisterPushToken(token) {
+    await wait(30);
+    state.pushTokens = state.pushTokens.filter((t) => t !== token);
+  },
+  async getPushSettings() {
+    await wait(40);
+    return { ...state.pushSettings, mutedTracks: [...state.pushSettings.mutedTracks] };
+  },
+  async savePushSettings(s) {
+    await wait(60);
+    state.pushSettings = { ...s, mutedTracks: [...new Set(s.mutedTracks)] };
+  },
+  async getInbox() {
+    await wait(60);
+    return sentNotifications
+      .filter((n) => n.status !== 'draft' && n.status !== 'failed' && inAudience(n))
+      .map((n): InboxItem => ({
+        id: n.id, kind: n.kind, title: n.title, body: n.body, url: n.url, trackId: n.trackId,
+        sentAt: n.sentAt ?? n.createdAt, readAt: state.inboxRead.has(n.id) ? n.createdAt : null,
+      }));
+  },
+  async markInboxRead(ids) {
+    await wait(30);
+    for (const n of sentNotifications) if (!ids || ids.includes(n.id)) state.inboxRead.add(n.id);
+  },
+  async adminNotificationReach(d) {
+    await wait(120);
+    requireAdmin();
+    const recipients = DEMO_REACH[d.audience];
+    return { recipients, pushTargets: Math.round(recipients * DEMO_OPT_IN[categoryOf(d.kind)]) };
+  },
+  async adminSendNotification(d: NotificationDraft) {
+    await wait(300);
+    requireAdmin();
+    const blocking = pushCopyIssues(d.kind, d.title, d.body).filter((i) => i.blocking);
+    if (blocking.length) throw new Error(blocking.map((i) => i.message).join(' '));
+    const reach = await demoApi.adminNotificationReach(d);
+    const n: SentNotification = {
+      ...d, title: d.title.trim(), body: d.body.trim(), id: `demo-${uid()}`, status: 'sending', createdAt: new Date().toISOString(), sentAt: null,
+      recipients: reach.recipients, pushTargets: reach.pushTargets, pushOk: 0, pushFailed: 0, opened: 0, error: null,
+    };
+    sentNotifications.unshift(n);
+    // O envio termina "em segundo plano", como no servidor.
+    setTimeout(() => {
+      n.status = 'sent';
+      n.sentAt = new Date().toISOString();
+      n.pushFailed = Math.round(n.pushTargets * 0.008);
+      n.pushOk = n.pushTargets - n.pushFailed;
+      if (presentDemoPush && wantsPush(state.pushSettings, n.kind, n.trackId) && inAudience(n)) presentDemoPush(n);
+    }, 1500);
+    return n.id;
+  },
+  async adminRetryNotification(id) {
+    await wait(200);
+    requireAdmin();
+    const n = sentNotifications.find((x) => x.id === id);
+    if (n && (n.status === 'failed' || n.status === 'draft')) n.status = 'sent';
+  },
+  async adminListNotifications() {
+    await wait(80);
+    requireAdmin();
+    return sentNotifications.map((n) => ({ ...n, opened: n.opened + (state.inboxRead.has(n.id) ? 1 : 0) }));
   },
 };

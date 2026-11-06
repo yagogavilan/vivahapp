@@ -7,8 +7,7 @@ import {
 } from '@expo-google-fonts/nunito-sans';
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import * as Notifications from 'expo-notifications';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -17,7 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/auth/session';
 import { Loading } from '@/components/ui';
-import { REMINDERS_SUPPORTED } from '@/lib/reminders';
+import { usePushRegistration } from '@/lib/push';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -52,15 +51,9 @@ function RootNavigator() {
     if (status !== 'loading') SplashScreen.hideAsync().catch(() => undefined);
   }, [status]);
 
-  // Tocar num lembrete abre a tela certa (Escudo do dia, live).
-  useEffect(() => {
-    if (!REMINDERS_SUPPORTED || !signedIn) return;
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const url = response.notification.request.content.data?.url;
-      if (typeof url === 'string') router.push(url as never);
-    });
-    return () => sub.remove();
-  }, [signedIn]);
+  // Push: registra o celular, atualiza o sino e abre a tela certa ao tocar no aviso
+  // (também os lembretes locais, que levam o mesmo campo url).
+  usePushRegistration(signedIn && onboarded);
 
   if (status === 'loading') return <Loading />;
 
@@ -88,7 +81,8 @@ function RootNavigator() {
         <Stack.Screen name="foco" options={detailHeader} />
         <Stack.Screen name="buscar" options={detailHeader} />
         <Stack.Screen name="conquistas" options={detailHeader} />
-        <Stack.Screen name="lembretes" options={detailHeader} />
+        <Stack.Screen name="lembretes" options={{ ...detailHeader, title: 'Notificações' }} />
+        <Stack.Screen name="avisos" options={{ ...detailHeader, title: 'Avisos' }} />
         <Stack.Screen name="favoritos" options={detailHeader} />
         <Stack.Screen name="certificado/[id]" options={detailHeader} />
         <Stack.Screen name="socorro" options={{ ...detailHeader, presentation: 'modal' }} />
@@ -111,6 +105,7 @@ function RootNavigator() {
         <Stack.Screen name="admin/curso/[id]" options={{ ...detailHeader, title: 'Curso' }} />
         <Stack.Screen name="admin/aula/[id]" options={{ ...detailHeader, title: 'Aula' }} />
         <Stack.Screen name="admin/loja" options={{ ...detailHeader, title: 'Loja' }} />
+        <Stack.Screen name="admin/avisos" options={{ ...detailHeader, title: 'Avisos e push' }} />
       </Stack.Protected>
     </Stack>
   );

@@ -14,6 +14,17 @@ Este é o **MVP de 01/12/2026**:
 - **Check-in de humor e sono:** só com consentimento (dado de saúde, LGPD art. 11).
 - **Privacidade:** o aluno exporta os próprios dados e apaga a conta dentro do app, como as lojas exigem.
 
+### Notificações push (versão 9)
+
+- **Admin escolhe quando avisar.** Em *Administração → Avisos e push*: aviso livre ou lançamento, para todos ou para quem assina uma trilha, com destino ao tocar (Agenda, Loja, Hoje da trilha…). Ao criar uma aula, o interruptor *Avisar os alunos* (desligado por padrão) já traz o texto pronto. No curso e no low ticket há *Avisar do lançamento*. Antes de enviar aparecem a prévia como no celular e quantas pessoas recebem. Depois aparecem os números: quantas receberam no sino, quantos push foram entregues e quantas pessoas abriram.
+- **Regras das lojas no próprio texto.** Aula, curso e low ticket não podem citar preço nem ter chamada de compra ("R$", "%", "compre agora", "desconto", "checkout"…). O botão de enviar fica bloqueado, e a função no servidor confere de novo. Lançamentos e ofertas só chegam por push a quem aceitou (diretriz 4.5.4 da Apple), e a data do aceite fica gravada.
+- **O aluno escolhe o que recebe.** Em *Perfil → Notificações e lembretes*: desligar tudo; ligar ou desligar *Aulas e cursos novos*, *Avisos da Vivah* e *Lançamentos e ofertas*; escolher de quais trilhas recebe. Os lembretes locais (Escudo e lives) continuam na mesma tela.
+- **Sino com caixa de avisos** em todas as trilhas e na tela inicial, com o número de não lidos. Funciona também na web, onde não há push. Tocar no push abre a tela certa e marca como lido, inclusive com o app fechado.
+- **Pedido de permissão na hora certa:** depois do primeiro check-in, um convite no Hoje ("Avisar quando sair aula nova?") com *Ativar* e *Agora não*. O pedido do sistema só aparece depois do *Ativar*, porque o iPhone só deixa pedir uma vez.
+- **Capacidade:** com 10 mil alunos, montar o público e a caixa de avisos leva cerca de 0,2 s no banco. O envio sai em lotes de 100 a até 500 por segundo, em segundo plano (cerca de 20 s para 10 mil celulares). Celulares que não existem mais saem da lista sozinhos. Ao sair da conta, o celular deixa de receber os avisos dela.
+
+Migração `20261113000000_notificacoes.sql` e função `send-notification` (ver *Ligar as notificações push*).
+
 ### Experiência mais visual (versão 8)
 
 - **Login com e-mail e senha** e cadastro completo: nome, e-mail, senha com medidor de força, confirmação da senha, aceite da LGPD e confirmação do e-mail por código. "Esqueci a senha" troca a senha com um código, sem sair do app.
@@ -178,6 +189,7 @@ O Expo Go da App Store só abre projetos até o SDK 54, e este app usa o SDK 58.
    npx supabase@latest secrets set HOTMART_HOTTOK=hottok-copiado-da-hotmart
    npx supabase@latest functions deploy hotmart-webhook --no-verify-jwt
    npx supabase@latest functions deploy delete-account
+   npx supabase@latest functions deploy send-notification
    ```
 
 ## Ligar a Hotmart
@@ -192,6 +204,24 @@ O Expo Go da App Store só abre projetos até o SDK 54, e este app usa o SDK 58.
 4. Use **Enviar teste** na Hotmart e confira a tabela **hotmart_events**: o campo `result` mostra `liberado`, `revogado`, `ignorado` ou o erro (por exemplo, produto não cadastrado). Depois de corrigir o cadastro, reenvie o evento pelo painel da Hotmart e ele é processado de novo.
 
 Order bumps e upsells são produtos próprios na Hotmart. Cadastre cada um em `products` com o seu ID.
+
+## Ligar as notificações push
+
+O push usa o serviço gratuito da Expo, que entrega pela Apple (APNs) e pelo Google (FCM).
+
+1. **Projeto no EAS** (uma vez): `npx eas-cli@latest init`. Isso grava `extra.eas.projectId` no `app.json`. Sem ele, o app funciona normalmente, mas não registra o celular.
+2. **Credenciais:**
+   - iPhone: `npx eas-cli@latest credentials` → iOS → *Push Notifications: set up a push key*. O EAS cria e guarda a chave da Apple (precisa da conta Apple Developer).
+   - Android: crie um projeto no Firebase, baixe o `google-services.json`, aponte para ele em `app.json` (`android.googleServicesFile`) e envie a chave de conta de serviço com `npx eas-cli@latest credentials` → Android → *FCM V1*.
+3. **Função de envio:**
+   ```bash
+   npx supabase@latest functions deploy send-notification
+   # Só se ligar "Enhanced push security" no painel da Expo:
+   npx supabase@latest secrets set EXPO_ACCESS_TOKEN=...
+   ```
+4. **Testar:** o push precisa de um build de desenvolvimento ou de loja (`npx eas-cli@latest build --profile development`). No Expo Go do Android não há push remoto. Entre no app, faça um check-in e toque em *Ativar*. Depois, no admin, envie um aviso para *Todos os alunos*.
+
+No **modo demonstração** não há servidor: o aviso enviado pelo admin aparece no sino das contas e, no celular, como notificação local.
 
 ## Cadastrar conteúdo (sem programar)
 

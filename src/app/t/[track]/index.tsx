@@ -7,6 +7,7 @@ import { BreathSession } from '@/components/breath';
 import { MoodPicker } from '@/components/mood';
 import { PanelSummary } from '@/components/panel';
 import { FeelingChip } from '@/components/feeling';
+import { PushInvite } from '@/components/inbox';
 import { SpaceCover, SpaceHeader } from '@/components/space';
 import { Button, ErrorState, Icon, type IconName, LinkText, ProgressBar, Row, Screen, Txt } from '@/components/ui';
 import { Columns, FadeIn, ScreenSkeleton } from '@/components/visual';
@@ -254,7 +255,7 @@ export default function HojeDaTrilha() {
         <Txt variant="hero">{sp.track?.promise ?? 'Um passo de cada vez.'}</Txt>
       </View>
       <Columns
-        left={<>{checkinCard}{breathCard}{journeyCard}{panel ? <FadeIn delay={40}><PanelSummary panel={panel} /></FadeIn> : null}</>}
+        left={<>{checkinCard}{breathCard}{journeyCard}{/* Pede a permissão depois do primeiro check-in, não na primeira tela. */}{checkin.today ? <PushInvite /> : null}{panel ? <FadeIn delay={40}><PanelSummary panel={panel} /></FadeIn> : null}</>}
         right={<>{continueCard}{tools}{evolutionCard}{agendaCard}{live ? <LiveCard live={live} /> : null}</>}
       />
     </Screen>

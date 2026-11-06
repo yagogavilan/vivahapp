@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSession } from '@/auth/session';
 import { JourneyList, type JourneyItemInfo } from '@/components/journey-list';
 import { SpaceCover } from '@/components/space';
+import { BellButton } from '@/components/inbox';
 import { ErrorState, Icon, Logo, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn, ScreenSkeleton } from '@/components/visual';
 import { useLatestDiagnostic, useLibrary, useProgress } from '@/data/hooks';
@@ -48,10 +49,13 @@ export default function EscolherTrilha() {
     <Screen>
       <Row style={{ justifyContent: 'space-between' }}>
         <Logo height={30} />
-        <Pressable onPress={() => router.push('/diagnostico')} accessibilityRole="button" style={styles.moment}>
-          <Icon name="compass" size={16} color={colors.coralText} />
-          <Txt variant="bodyStrong" style={{ fontSize: 13, color: colors.coralText }}>{moment ? moment.title.replace('Momento de ', '') : 'Fazer o teste'}</Txt>
-        </Pressable>
+        <Row gap={space.sm}>
+          <Pressable onPress={() => router.push('/diagnostico')} accessibilityRole="button" style={styles.moment}>
+            <Icon name="compass" size={16} color={colors.coralText} />
+            <Txt variant="bodyStrong" style={{ fontSize: 13, color: colors.coralText }}>{moment ? moment.title.replace('Momento de ', '') : 'Fazer o teste'}</Txt>
+          </Pressable>
+          <BellButton />
+        </Row>
       </Row>
       <View style={{ gap: 2 }}>
         <Txt variant="eyebrow">{greeting()}{firstName ? `, ${firstName}` : ''}</Txt>

@@ -40,6 +40,15 @@ function AdminTracks() {
         <Txt variant="small">{lib.storeItems.length} produtos · {lib.storeItems.filter((i) => i.active && !i.checkoutUrl).length} sem link de pagamento</Txt>
       </Card>
 
+      <Card onPress={() => router.push('/admin/avisos')} style={{ gap: 4 }}>
+        <Row gap={space.sm}>
+          <Icon name="bell" size={18} color={colors.coralText} />
+          <Txt variant="heading" style={{ flex: 1 }}>Avisos e push</Txt>
+          <Icon name="chevron-right" size={18} color={colors.textSubtle} />
+        </Row>
+        <Txt variant="small">Mande um recado, avise de live ou lançamento e veja quantos abriram.</Txt>
+      </Card>
+
       {lib.tracks.map((t) => {
         const cs = trackCourses(t.id, lib.courses);
         const lows = lowTicketsOf(t.id, lib.courses);

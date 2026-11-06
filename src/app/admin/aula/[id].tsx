@@ -6,7 +6,9 @@ import { AdminGate, backTo, ConfirmDelete } from '@/components/admin';
 import { TrackContextBar } from '@/components/space';
 import { Button, Card, Chip, Empty, ErrorState, Field, Row, Screen, Txt } from '@/components/ui';
 import { ScreenSkeleton } from '@/components/visual';
-import { useAdmin, useLessonMedia, useLibrary } from '@/data/hooks';
+import { NotifyToggle, hasBlockingIssues, useOptionalNotice } from '@/components/notify';
+import { useAdmin, useLessonMedia, useLibrary, useSendNotification } from '@/data/hooks';
+import { draftForLesson } from '@/domain/notifications';
 import type { Lesson, LessonKind, LessonMedia } from '@/data/types';
 import { slugId } from '@/domain/admin';
 import { colors, space } from '@/theme';
@@ -70,6 +72,10 @@ function LessonForm({ lib, courseId, moduleId, lesson, media, defaultSort }: {
   defaultSort: number;
 }) {
   const admin = useAdmin();
+  const { send } = useSendNotification();
+  const course = lib.courses.find((c) => c.id === courseId)!;
+  const track = lib.tracks.find((t) => t.id === course.trackId);
+  const notice = useOptionalNotice(() => draftForLesson({ id: lesson?.id ?? 'nova', title: lesson?.title ?? '', courseId }, course, track));
   const modules = lib.modules.filter((m) => m.courseId === courseId).sort((a, b) => a.sort - b.sort);
   const [title, setTitle] = useState(lesson?.title ?? '');
   const [summary, setSummary] = useState(lesson?.summary ?? '');
@@ -83,13 +89,19 @@ function LessonForm({ lib, courseId, moduleId, lesson, media, defaultSort }: {
   const minutes = Number.parseInt(duration, 10);
   const valid = title.trim().length >= 3 && Number.isFinite(minutes) && minutes >= 0 && minutes <= 600;
   const back = () => backTo({ pathname: '/admin/curso/[id]', params: { id: courseId } });
+  const lessonId = lesson?.id ?? slugId(title, lib.lessons.map((l) => l.id), `${moduleId}--`);
+  // O título do aviso acompanha o título da aula até o admin mexer nele.
+  const [titleTouched, setTitleTouched] = useState(false);
+  const autoTitle = draftForLesson({ id: lessonId, title: title.trim() || 'nova aula', courseId }, course, track).title;
+  const finalNotice = { ...notice.draft, url: `/aula/${lessonId}`, lessonId, title: titleTouched ? notice.draft.title : autoTitle };
+  const noticeBlocked = notice.on && hasBlockingIssues(finalNotice);
 
   const save = () => {
     setError(null);
     const movedSort = Math.max(0, ...lib.lessons.filter((l) => l.moduleId === targetModule).map((l) => l.sort)) + 1;
     admin.saveLesson.mutate(
       {
-        id: lesson?.id ?? slugId(title, lib.lessons.map((l) => l.id), `${moduleId}--`),
+        id: lessonId,
         moduleId: targetModule,
         courseId,
         title: title.trim(),
@@ -101,7 +113,16 @@ function LessonForm({ lib, courseId, moduleId, lesson, media, defaultSort }: {
         mediaUrl: mediaUrl.trim() || null,
         body: body.trim() || null,
       },
-      { onSuccess: back, onError: (e) => setError(e.message) },
+      {
+        onSuccess: () => {
+          if (!notice.on) return back();
+          send.mutate(finalNotice, {
+            onSuccess: back,
+            onError: (e) => setError(`A aula foi salva, mas o aviso não saiu: ${e.message}`),
+          });
+        },
+        onError: (e) => setError(e.message),
+      },
     );
   };
 
@@ -141,8 +162,24 @@ function LessonForm({ lib, courseId, moduleId, lesson, media, defaultSort }: {
           </Row>
         </View>
       ) : null}
+      <NotifyToggle
+        label={lesson ? 'Avisar os alunos sobre esta aula' : 'Avisar os alunos da aula nova'}
+        on={notice.on}
+        onToggle={notice.setOn}
+        draft={finalNotice}
+        onChange={(d) => {
+          if (d.title !== finalNotice.title) setTitleTouched(true);
+          notice.setDraft(d);
+        }}
+      />
       {error ? <Txt variant="small" style={{ color: colors.danger }}>{error}</Txt> : null}
-      <Button label={lesson ? 'Salvar aula' : 'Criar aula'} icon="save" disabled={!valid} loading={admin.saveLesson.isPending} onPress={save} />
+      <Button
+        label={notice.on ? (lesson ? 'Salvar e avisar' : 'Criar e avisar') : lesson ? 'Salvar aula' : 'Criar aula'}
+        icon={notice.on ? 'send' : 'save'}
+        disabled={!valid || noticeBlocked}
+        loading={admin.saveLesson.isPending || send.isPending}
+        onPress={save}
+      />
       {lesson ? (
         <ConfirmDelete
           label="Excluir aula"

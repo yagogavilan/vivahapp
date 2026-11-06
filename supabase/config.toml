@@ -22,3 +22,7 @@ verify_jwt = true
 [functions.validate-contributions]
 # O app chama logo depois de publicar ou comentar (com o login do aluno).
 verify_jwt = true
+
+[functions.send-notification]
+# Só o admin chama (a função confere a role no perfil).
+verify_jwt = true

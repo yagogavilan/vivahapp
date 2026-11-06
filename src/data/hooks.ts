@@ -18,9 +18,12 @@ import type {
   DailyLog,
   Favorite,
   Feeling,
+  InboxItem,
   LifeArea,
+  NotificationDraft,
   Post,
   PostKind,
+  PushSettings,
   ReactionKind,
   SupportStatus,
   StoreItem,
@@ -450,5 +453,85 @@ export function useTrackEntryMutations() {
       mutationFn: (v: { trackId: string; metric: string; delta: number }) => api.addTrackCounter(v.trackId, v.metric, v.delta),
       onSuccess: refresh,
     }),
+  };
+}
+
+// ——— Notificações ———
+
+export function usePushSettings() {
+  return useQuery({ queryKey: useKey('push-settings'), queryFn: () => api.getPushSettings() });
+}
+
+/** Salva na hora (otimista): o interruptor muda sem esperar o servidor. */
+export function useSavePushSettings() {
+  const qc = useQueryClient();
+  const key = useKey('push-settings');
+  return useMutation({
+    mutationFn: (s: PushSettings) => api.savePushSettings(s),
+    onMutate: async (s) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<PushSettings>(key);
+      qc.setQueryData(key, s);
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(key, ctx.prev),
+    onSettled: () => qc.invalidateQueries({ queryKey: key }),
+  });
+}
+
+/** Caixa de avisos (o sino). Confere de novo a cada 2 minutos com o app aberto. */
+export function useInbox() {
+  const { status } = useSession();
+  return useQuery({
+    queryKey: useKey('inbox'),
+    queryFn: () => api.getInbox(),
+    enabled: status === 'signedIn',
+    refetchInterval: 120_000,
+    staleTime: 30_000,
+  });
+}
+
+export function useUnreadCount(): number {
+  const inbox = useInbox();
+  return (inbox.data ?? []).filter((n) => !n.readAt).length;
+}
+
+export function useMarkInboxRead() {
+  const qc = useQueryClient();
+  const key = useKey('inbox');
+  return useMutation({
+    mutationFn: (ids?: string[]) => api.markInboxRead(ids),
+    onMutate: (ids) => {
+      const now = new Date().toISOString();
+      qc.setQueryData<InboxItem[]>(key, (list) => list?.map((n) => (!ids || ids.includes(n.id)) && !n.readAt ? { ...n, readAt: now } : n));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: key }),
+  });
+}
+
+/** Admin: histórico dos avisos. Enquanto algum estiver "enviando", atualiza sozinho. */
+export function useSentNotifications() {
+  return useQuery({
+    queryKey: useKey('admin-notifications'),
+    queryFn: () => api.adminListNotifications(),
+    refetchInterval: (q) => (q.state.data?.some((n) => n.status === 'sending') ? 2000 : false),
+  });
+}
+
+export function useNotificationReach(draft: NotificationDraft | null) {
+  return useQuery({
+    queryKey: useKey('reach', draft?.kind, draft?.audience, draft?.trackId, draft?.courseId),
+    queryFn: () => api.adminNotificationReach(draft!),
+    enabled: Boolean(draft),
+    staleTime: 60_000,
+  });
+}
+
+export function useSendNotification() {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ predicate: (q) => q.queryKey.includes('admin-notifications') || q.queryKey.includes('inbox') });
+  return {
+    send: useMutation({ mutationFn: (d: NotificationDraft) => api.adminSendNotification(d), onSuccess: refresh }),
+    retry: useMutation({ mutationFn: (id: string) => api.adminRetryNotification(id), onSuccess: refresh }),
   };
 }

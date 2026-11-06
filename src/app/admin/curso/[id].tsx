@@ -6,7 +6,10 @@ import { AddButton, AdminGate, AdminRow, AdminSection, backTo, ConfirmDelete } f
 import { TrackContextBar } from '@/components/space';
 import { Button, Card, Chip, Empty, ErrorState, Icon, Row, Screen, Txt, Field } from '@/components/ui';
 import { ScreenSkeleton } from '@/components/visual';
-import { useAdmin, useLibrary } from '@/data/hooks';
+import { hasBlockingIssues, NotifyComposer } from '@/components/notify';
+import { useAdmin, useLibrary, useSendNotification } from '@/data/hooks';
+import { draftForCourse } from '@/domain/notifications';
+import { confirm } from '@/lib/dialogs';
 import type { Course, LowTicketFormat, Module } from '@/data/types';
 import { isCheckoutUrl, moveId, slugId } from '@/domain/admin';
 import { colors, fonts, radius, space } from '@/theme';
@@ -50,6 +53,7 @@ function AdminCourseBody() {
         defaultSort={Number(params.sort) || Math.max(0, ...lib.courses.map((c) => c.sort)) + 1}
       />
       {course ? <ModulesEditor lib={lib} course={course} /> : null}
+      {course ? <CourseNotice key={course.id} lib={lib} course={course} /> : null}
     </Screen>
   );
 }
@@ -266,5 +270,60 @@ function ModuleCard({ lib, mod, index, onUp, onDown }: { lib: Lib; mod: Module; 
         onPress={() => router.push({ pathname: '/admin/aula/[id]', params: { id: 'nova', module: mod.id, sort: String(Math.max(0, ...lessons.map((l) => l.sort)) + 1) } })}
       />
     </Card>
+  );
+}
+
+/**
+ * Avisar do curso ou do low ticket. Curso da trilha vai para quem assina.
+ * Low ticket é oferta: só chega por push a quem aceitou lançamentos.
+ */
+function CourseNotice({ lib, course }: { lib: Lib; course: Course }) {
+  const track = lib.trackById.get(course.trackId);
+  const { send } = useSendNotification();
+  const [draft, setDraft] = useState(() => draftForCourse(course, track));
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const lessons = lib.lessons.filter((l) => l.courseId === course.id).length;
+  const title = course.lowTicket ? 'Avisar do lançamento' : 'Avisar do curso novo';
+
+  if (!lessons) {
+    return (
+      <AdminSection title={title} hint="Cadastre pelo menos uma aula antes de avisar.">
+        {null}
+      </AdminSection>
+    );
+  }
+
+  const submit = async () => {
+    setError(null);
+    if (!(await confirm('Enviar agora?', 'Depois de enviado, não dá para apagar do celular das pessoas.', 'Enviar'))) return;
+    send.mutate(draft, { onSuccess: () => setSent(true), onError: (e) => setError(e.message) });
+  };
+
+  return (
+    <AdminSection
+      title={title}
+      hint={course.lowTicket
+        ? 'Sem preço nem "compre": nos apps do celular a pessoa só conhece o material. Push só para quem aceitou lançamentos.'
+        : 'Vai para quem assina a trilha. Opcional: envie quando o curso estiver pronto.'}>
+      {course.lowTicket ? (
+        <Row style={{ flexWrap: 'wrap' }}>
+          <Chip label="Todos que aceitaram ofertas" selected={draft.audience === 'all'} onPress={() => setDraft({ ...draft, audience: 'all' })} />
+          <Chip label={`Só assinantes ${track?.title ?? ''}`} selected={draft.audience === 'track'} onPress={() => setDraft({ ...draft, audience: 'track' })} />
+        </Row>
+      ) : null}
+      {sent ? (
+        <Card tone="mint" style={{ gap: 4 }}>
+          <Txt variant="bodyStrong">Aviso enviado</Txt>
+          <Txt variant="small">Os números (entregues e abertos) aparecem em Administração, Avisos e push.</Txt>
+        </Card>
+      ) : (
+        <>
+          <NotifyComposer draft={draft} onChange={setDraft} />
+          {error ? <Txt variant="small" style={{ color: colors.danger }}>{error}</Txt> : null}
+          <Button label="Enviar aviso" icon="send" disabled={hasBlockingIssues(draft)} loading={send.isPending} onPress={submit} />
+        </>
+      )}
+    </AdminSection>
   );
 }

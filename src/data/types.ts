@@ -1,3 +1,5 @@
+import type { NotificationKind, PushSettings } from '../../supabase/functions/_shared/push';
+
 export type LifeArea = 'mente' | 'tempo' | 'carreira' | 'financas' | 'corpo' | 'alimentacao';
 
 export type TrackStatus = 'live' | 'soon';
@@ -319,6 +321,8 @@ export interface Preferences {
   showStreak?: boolean;
   /** Última trilha (espaço) aberta, destacada na escolha de trilha. */
   lastSpace?: string;
+  /** Quando o convite para ativar as notificações foi respondido ("Agora não" ou ativou). */
+  pushPromptAt?: string;
 }
 
 export interface Profile {
@@ -352,4 +356,55 @@ export interface LessonProgress {
   lessonId: string;
   positionSec: number;
   completedAt: string | null;
+}
+
+// ——— Notificações ———
+export type { NotificationKind, PushSettings };
+
+/** Público de um aviso: todos, quem assina a trilha ou quem tem o curso. */
+export type NotificationAudience = 'all' | 'track' | 'course';
+
+/** Aviso na caixa do aluno (o sino). */
+export interface InboxItem {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  url: string | null;
+  trackId: string | null;
+  sentAt: string;
+  readAt: string | null;
+}
+
+/** O que o admin escreve antes de enviar. */
+export interface NotificationDraft {
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  url: string | null;
+  audience: NotificationAudience;
+  trackId: string | null;
+  courseId: string | null;
+  lessonId: string | null;
+}
+
+export type NotificationStatus = 'draft' | 'sending' | 'sent' | 'failed';
+
+/** Aviso no histórico do admin, com os números do envio. */
+export interface SentNotification extends NotificationDraft {
+  id: string;
+  status: NotificationStatus;
+  createdAt: string;
+  sentAt: string | null;
+  recipients: number;
+  pushTargets: number;
+  pushOk: number;
+  pushFailed: number;
+  opened: number;
+  error: string | null;
+}
+
+export interface NotificationReach {
+  recipients: number;
+  pushTargets: number;
 }

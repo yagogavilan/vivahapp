@@ -187,7 +187,7 @@ export function Field({ label, hint, ...props }: TextInputProps & { label: strin
   return (
     <View style={{ gap: space.xs }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput placeholderTextColor={colors.textSubtle} {...props} style={[styles.input, props.multiline && { minHeight: 96, textAlignVertical: 'top' }, props.style]} />
+      <TextInput placeholderTextColor={colors.textSubtle} accessibilityLabel={label} {...props} style={[styles.input, props.multiline && { minHeight: 96, textAlignVertical: 'top' }, props.style]} />
       {hint ? <Txt variant="small">{hint}</Txt> : null}
     </View>
   );

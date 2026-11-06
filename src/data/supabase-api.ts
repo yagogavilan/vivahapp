@@ -1,9 +1,13 @@
 import { authMessage } from '../domain/auth';
 import { dayKey } from '../domain/dates';
+import { DEFAULT_PUSH_SETTINGS } from '../domain/notifications';
 import { PERSISTENT_METRICS } from '../domain/panels';
 import { requireSupabase } from '../lib/supabase';
 import type { Api, Catalog, ProfilePatch, SessionUser } from './api';
 import type {
+  InboxItem,
+  NotificationDraft,
+  SentNotification,
   AdviceRequest,
   SupportAction,
   Activity,
@@ -83,6 +87,15 @@ async function currentUserId(): Promise<string> {
   const { data } = await sb.auth.getUser();
   if (!data.user) throw new Error('Sua sessão expirou. Entre de novo.');
   return data.user.id;
+}
+
+/** Chama a função de envio e traz a mensagem do servidor quando ela recusa. */
+async function invokeSend(notificationId: string) {
+  const { error } = await requireSupabase().functions.invoke('send-notification', { body: { notificationId } });
+  if (!error) return;
+  const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+  const detail = await ctx?.json?.().catch(() => null);
+  throw new Error(detail?.error ?? 'Não foi possível enviar agora. O aviso ficou salvo: tente de novo no histórico.');
 }
 
 const toSessionUser = (u: { id: string; email?: string | null } | null | undefined): SessionUser | null =>
@@ -784,5 +797,73 @@ export const supabaseApi: Api = {
   async addTrackCounter(trackId, metric, delta) {
     const v = check(await requireSupabase().rpc('track_counter_add', { p_track: trackId, p_metric: metric, p_delta: delta })) as unknown;
     return Number(v) || 0;
+  },
+  async registerPushToken(token, platform) {
+    check(await requireSupabase().rpc('register_push_token', { p_token: token, p_platform: platform }));
+  },
+
+  async unregisterPushToken(token) {
+    check(await requireSupabase().rpc('unregister_push_token', { p_token: token }));
+  },
+
+  async getPushSettings() {
+    const r = check(await requireSupabase().from('notification_settings').select('*').maybeSingle()) as Row | null;
+    if (!r) return { ...DEFAULT_PUSH_SETTINGS };
+    return {
+      pushEnabled: r.push_enabled, newLessons: r.new_lessons, announcements: r.announcements, launches: r.launches, mutedTracks: r.muted_tracks ?? [],
+    };
+  },
+
+  async savePushSettings(s) {
+    check(await requireSupabase().from('notification_settings').upsert({
+      user_id: await currentUserId(),
+      push_enabled: s.pushEnabled,
+      new_lessons: s.newLessons,
+      announcements: s.announcements,
+      launches: s.launches,
+      muted_tracks: s.mutedTracks,
+    }));
+  },
+
+  async getInbox() {
+    const rows = check(await requireSupabase().rpc('my_inbox', { p_limit: 60 })) as Row[];
+    return rows.map((r): InboxItem => ({
+      id: r.id, kind: r.kind, title: r.title, body: r.body, url: r.url, trackId: r.track_id, sentAt: r.sent_at, readAt: r.read_at,
+    }));
+  },
+
+  async markInboxRead(ids) {
+    check(await requireSupabase().rpc('mark_notifications_read', { p_ids: ids ?? null }));
+  },
+
+  async adminNotificationReach(d) {
+    const r = check(await requireSupabase().rpc('notification_reach', {
+      p_kind: d.kind, p_audience: d.audience, p_track: d.trackId, p_course: d.courseId,
+    }).single()) as Row;
+    return { recipients: Number(r.recipients) || 0, pushTargets: Number(r.push_targets) || 0 };
+  },
+
+  async adminSendNotification(d: NotificationDraft) {
+    const sb = requireSupabase();
+    const row = check(await sb.from('notifications').insert({
+      kind: d.kind, title: d.title.trim(), body: d.body.trim(), url: d.url, audience: d.audience,
+      track_id: d.trackId, course_id: d.courseId, lesson_id: d.lessonId,
+    }).select('id').single()) as Row;
+    await invokeSend(row.id);
+    return row.id as string;
+  },
+
+  async adminRetryNotification(id) {
+    await invokeSend(id);
+  },
+
+  async adminListNotifications() {
+    const rows = check(await requireSupabase().rpc('admin_notifications', { p_limit: 60 })) as Row[];
+    return rows.map((r): SentNotification => ({
+      id: r.id, kind: r.kind, title: r.title, body: r.body, url: r.url, audience: r.audience, trackId: r.track_id,
+      courseId: r.course_id, lessonId: null, status: r.status, createdAt: r.created_at, sentAt: r.sent_at,
+      recipients: r.recipients, pushTargets: r.push_targets, pushOk: r.push_ok, pushFailed: r.push_failed,
+      opened: Number(r.opened) || 0, error: r.error,
+    }));
   },
 };

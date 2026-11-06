@@ -9,6 +9,7 @@ import { tap } from '../lib/haptics';
 import { colors, radius, space as sp } from '../theme';
 import { AREA_ICON } from './area-icons';
 import { Icon, type IconName, Row, Txt } from './ui';
+import { BellButton } from './inbox';
 import { TrackCover } from './visual';
 
 export function spaceIcon(s: Pick<Space, 'area'>): IconName {
@@ -58,6 +59,7 @@ export function SpaceHeader({ space, right }: { space: Space; right?: ReactNode 
         </SpaceCover>
       </Pressable>
       {right}
+      <BellButton />
       {space.id === 'respira' ? <Pressable
         onPress={() => {
           tap();

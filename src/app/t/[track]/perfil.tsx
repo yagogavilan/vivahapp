@@ -169,7 +169,7 @@ export default function Perfil() {
         <MenuItem icon="award" label="Níveis de bondade e prêmios" onPress={() => router.push({ pathname: '/t/[track]/loja', params: { track: sp.id, aba: 'pontos' } })} />
         <MenuItem icon="star" label="Conselheiros" onPress={() => router.push('/conselheiros')} />
         <MenuItem icon="heart" label="Favoritos" onPress={() => router.push('/favoritos')} />
-        <MenuItem icon="bell" label="Lembretes e sequência" onPress={() => router.push('/lembretes')} />
+        <MenuItem icon="bell" label="Notificações e lembretes" onPress={() => router.push('/lembretes')} />
         <MenuItem icon="target" label="Bloco de foco" onPress={() => router.push('/foco')} />
         <MenuItem icon="shield" label="Privacidade e meus dados" onPress={() => router.push('/privacidade')} />
         <MenuItem

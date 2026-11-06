@@ -37,6 +37,11 @@ import type {
   Profile,
   StoreItem,
   Track,
+  InboxItem,
+  NotificationDraft,
+  NotificationReach,
+  PushSettings,
+  SentNotification,
 } from './types';
 
 import type { Entry } from '../domain/panels';
@@ -219,4 +224,21 @@ export interface Api {
   /** Loja: produtos físicos (criar ou editar). */
   adminSaveStoreItem(item: StoreItem): Promise<void>;
   adminDeleteStoreItem(id: string): Promise<void>;
+
+  // Notificações push e caixa de avisos.
+  /** Liga este celular à conta (token da Expo). O mesmo celular pode trocar de dono. */
+  registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void>;
+  unregisterPushToken(token: string): Promise<void>;
+  getPushSettings(): Promise<PushSettings>;
+  savePushSettings(settings: PushSettings): Promise<void>;
+  getInbox(): Promise<InboxItem[]>;
+  /** Sem ids = marca todos como lidos. */
+  markInboxRead(ids?: string[]): Promise<void>;
+  /** Quantas pessoas o aviso alcança e quantas recebem push. */
+  adminNotificationReach(draft: NotificationDraft): Promise<NotificationReach>;
+  /** Cria e envia (o envio termina em segundo plano). Devolve o id. */
+  adminSendNotification(draft: NotificationDraft): Promise<string>;
+  /** Tenta de novo um aviso que ficou como rascunho ou falhou. */
+  adminRetryNotification(id: string): Promise<void>;
+  adminListNotifications(): Promise<SentNotification[]>;
 }
