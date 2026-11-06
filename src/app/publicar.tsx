@@ -7,6 +7,7 @@ import { Button, Field, Row, Screen, Txt } from '@/components/ui';
 import { useCommunityMutations, useTodayCheckin } from '@/data/hooks';
 import type { Feeling, PostKind } from '@/data/types';
 import { FEELING_ORDER, FEELINGS } from '@/domain/checkin-protocol';
+import { programFor } from '@/domain/programs';
 import { AQUECIMENTO } from '@/domain/spaces';
 import { success, tap } from '@/lib/haptics';
 import { colors, radius, space } from '@/theme';
@@ -28,6 +29,8 @@ export default function Publicar() {
   const [error, setError] = useState<string | null>(null);
   // Sem escolha explícita, usa o sentimento do check-in de hoje.
   const chosen = feeling === undefined ? feelingToday : feeling;
+  const program = programFor(track);
+  const kindLabel = (k: PostKind) => (k === 'apoio' ? 'Pedir apoio' : k === 'dica' ? `${program.community.dicaPost} · +4 pontos` : KIND_INFO[k].label);
 
   return (
     <Screen padTop={false}>
@@ -39,7 +42,7 @@ export default function Publicar() {
           {(Object.keys(KIND_INFO) as PostKind[]).map((k) => (
             <Pressable key={k} onPress={() => { tap(); setKind(k); }} accessibilityRole="button" accessibilityState={{ selected: kind === k }}
               style={[styles.choice, { backgroundColor: kind === k ? KIND_INFO[k].bg : colors.surface, borderColor: kind === k ? KIND_INFO[k].fg : colors.border }]}>
-              <Txt variant="bodyStrong" style={{ color: kind === k ? KIND_INFO[k].fg : colors.text }}>{KIND_INFO[k].label === 'Pede apoio' ? 'Pedir apoio' : KIND_INFO[k].label}</Txt>
+              <Txt variant="bodyStrong" style={{ color: kind === k ? KIND_INFO[k].fg : colors.text }}>{kindLabel(k)}</Txt>
             </Pressable>
           ))}
         </View>
@@ -58,6 +61,11 @@ export default function Publicar() {
         </View>
       </View>
 
+      {kind === 'dica' ? (
+        <Txt variant="small">
+          {program.community.conselho} vale 4 pontos quando é validada: pelo menos 80 caracteres, prática e útil. Uma por dia conta pontos.
+        </Txt>
+      ) : null}
       <Field label="Sua mensagem" value={body} onChangeText={setBody} placeholder={PLACEHOLDER[kind]} multiline maxLength={2000} />
       <Row style={{ justifyContent: 'flex-end' }}>
         <Button

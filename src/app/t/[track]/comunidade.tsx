@@ -8,10 +8,11 @@ import { LevelBadge } from '@/components/feeling';
 import { SpaceHeader } from '@/components/space';
 import { Empty, ErrorState, Icon, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn, ScreenSkeleton } from '@/components/visual';
-import { useKindness, usePosts, useTodayCheckin } from '@/data/hooks';
+import { usePointsSummary, usePosts, useTodayCheckin } from '@/data/hooks';
 import type { Feeling, Post } from '@/data/types';
 import { FEELING_ORDER, FEELINGS } from '@/domain/checkin-protocol';
 import { progressToNext } from '@/domain/kindness';
+import { formatPoints } from '@/domain/points';
 import { tap } from '@/lib/haptics';
 import { useSpace } from '@/lib/space-context';
 import { colors, radius, shadow, space } from '@/theme';
@@ -51,7 +52,7 @@ export default function Comunidade() {
   const sp = useSpace();
   const { profile } = useSession();
   const posts = usePosts(sp.channel);
-  const kindness = useKindness();
+  const kindness = usePointsSummary(sp.id);
   const { feelingToday } = useTodayCheckin(sp.id);
   const [filter, setFilter] = useState<Filter>('todos');
   const [feeling, setFeeling] = useState<Feeling | null>(null);
@@ -61,7 +62,7 @@ export default function Comunidade() {
 
   const list = applyFilter(posts.data ?? [], filter, feeling);
   const k = kindness.data;
-  const prog = k ? progressToNext(k.points, k.givers) : undefined;
+  const prog = k ? progressToNext(k.earned, k.givers) : undefined;
   const name = profile?.fullName?.split(' ')[0] ?? 'Você';
   const feelings = feelingToday ? [feelingToday, ...FEELING_ORDER.filter((f) => f !== feelingToday)] : FEELING_ORDER;
 
@@ -75,12 +76,12 @@ export default function Comunidade() {
 
       {/* Bondade: nível, progresso e atalho para os conselheiros. */}
       <Row gap={space.sm} style={{ alignItems: 'stretch' }}>
-        <Pressable onPress={() => router.push('/bondade')} accessibilityRole="button" style={[styles.kind, shadow]}>
+        <Pressable onPress={() => router.push({ pathname: '/t/[track]/recompensas', params: { track: sp.id } })} accessibilityRole="button" style={[styles.kind, shadow]}>
           <Row style={{ justifyContent: 'space-between' }}>
             <LevelBadge level={k?.level ?? 1} showSeed />
             <Icon name="chevron-right" size={16} color={colors.textSubtle} />
           </Row>
-          <Txt variant="bodyStrong" style={{ fontSize: 15 }}>{k ? `${k.points} pontos de bondade` : 'Pontos de bondade'}</Txt>
+          <Txt variant="bodyStrong" style={{ fontSize: 15 }}>{k ? `${formatPoints(k.balance)} pontos para resgatar` : 'Pontos de bondade'}</Txt>
           {prog?.next ? (
             <>
               <View style={styles.bar}><View style={[styles.barFill, { width: `${Math.max(3, prog.ratio * 100)}%` }]} /></View>
@@ -88,7 +89,7 @@ export default function Comunidade() {
             </>
           ) : null}
         </Pressable>
-        <Pressable onPress={() => router.push('/conselheiros')} accessibilityRole="button" style={[styles.counsel]}>
+        <Pressable onPress={() => router.push({ pathname: '/conselheiros', params: { track: sp.id } })} accessibilityRole="button" style={[styles.counsel]}>
           <Icon name="star" size={20} color="#F2C14E" />
           <Txt variant="bodyStrong" style={{ color: colors.onDark, fontSize: 15 }}>Conselheiros</Txt>
           <Txt variant="small" style={{ color: colors.onDarkMuted, fontSize: 12 }}>Converse com quem já passou por isso</Txt>

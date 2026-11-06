@@ -60,7 +60,7 @@ export default function Conversa() {
       {!iAmCounselor && (r.status === 'aceito' || r.status === 'encerrado') ? (
         <View style={styles.thanks}>
           <Txt variant="bodyStrong">{other} te ajudou?</Txt>
-          <Txt variant="small">O seu obrigado vale 30 pontos de bondade para quem aconselhou.</Txt>
+          <Txt variant="small">O seu obrigado vale 2 pontos de bondade para quem aconselhou.</Txt>
           <Button
             label="Agradecer o conselho"
             icon="gift"

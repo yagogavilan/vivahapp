@@ -5,7 +5,12 @@ import { useSession } from '@/auth/session';
 import { CheckinStrip, DiagnosticBars } from '@/components/charts';
 import { Button, Card, Icon, type IconName, LinkText, Row, Screen, Txt } from '@/components/ui';
 import { WeekStrip } from '@/components/engagement';
-import { useCheckins, useKindness, useLatestDiagnostic, useLibrary, useProgress, useStreak } from '@/data/hooks';
+import { useAllPointsSummaries, useCheckins, useLatestDiagnostic, useLibrary, usePointsSummary, useProgress, useStreak } from '@/data/hooks';
+import { KindnessSeal, LessonBadge } from '@/components/badges';
+import { spaceIcon } from '@/components/space';
+import { trackBadge } from '@/domain/badges';
+import { levelInfo } from '@/domain/kindness';
+import { AQUECIMENTO, spaceAccess, spaceFor } from '@/domain/spaces';
 import { formatShortDate } from '@/domain/dates';
 import { confirm } from '@/lib/dialogs';
 import { useSpace } from '@/lib/space-context';
@@ -27,13 +32,16 @@ function MenuItem({ icon, label, onPress }: { icon: IconName; label: string; onP
 export default function Perfil() {
   const { profile, user, signOut } = useSession();
   const sp = useSpace();
-  const kindness = useKindness();
+  const kindness = usePointsSummary(sp.id);
   const library = useLibrary();
   const diagnostic = useLatestDiagnostic();
   const checkins = useCheckins(14);
   const streak = useStreak();
   const progress = useProgress();
   const lessonsDone = (progress.data ?? []).filter((p) => p.completedAt).length;
+
+  const spaceIds = [AQUECIMENTO, ...(library.data?.tracks ?? []).slice().sort((a, b) => a.sort - b.sort).map((t) => t.id)];
+  const summaries = useAllPointsSummaries(spaceIds);
 
   const myCourses = library.data?.courses.filter((c) => !c.isFree && library.data!.access.has(c.id)) ?? [];
 
@@ -47,6 +55,38 @@ export default function Perfil() {
           <LevelBadge level={kindness.data?.level ?? 1} showSeed />
         </View>
       </View>
+
+      {library.data ? (
+        <Card style={{ gap: space.md }}>
+          <View style={{ gap: 2 }}>
+            <Txt variant="heading">Coleção de selos</Txt>
+            <Txt variant="small">
+              Cada trilha tem dois selos: o de aulas, que se completa pedaço por pedaço a cada curso concluído, e o de bondade, que sobe
+              conforme você ajuda as pessoas daquela comunidade.
+            </Txt>
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.md }}>
+            {spaceIds.map((id, i) => {
+              const s = spaceFor(id, library.data!.tracks)!;
+              const lvl = summaries[i]?.data?.level ?? 1;
+              const badge = id === AQUECIMENTO ? null : trackBadge(id, library.data!.courses, library.data!.lessons, progress.data ?? []);
+              const owned = spaceAccess(id, library.data!.tracks, library.data!.courses, library.data!.access) === 'open';
+              return (
+                <View key={id} style={{ width: 150, alignItems: 'center', gap: 6, paddingVertical: space.sm }}>
+                  <Txt variant="bodyStrong">{s.title}</Txt>
+                  <Row gap={space.sm}>
+                    {badge ? <LessonBadge badge={badge} icon={spaceIcon(s)} size={58} muted={!owned} /> : null}
+                    <KindnessSeal level={lvl} size={badge ? 44 : 58} />
+                  </Row>
+                  <Txt variant="small" style={{ fontSize: 12, textAlign: 'center' }}>
+                    {badge ? `${badge.piecesComplete}/${badge.pieces.length} cursos · ` : ''}{levelInfo(Math.min(8, lvl)).name}
+                  </Txt>
+                </View>
+              );
+            })}
+          </View>
+        </Card>
+      ) : null}
 
       {streak ? (
         <Card onPress={() => router.push('/conquistas')} style={{ gap: space.md }}>

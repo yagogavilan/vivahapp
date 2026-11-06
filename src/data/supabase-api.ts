@@ -2,6 +2,7 @@ import { requireSupabase } from '../lib/supabase';
 import type { Api, Catalog, ProfilePatch, SessionUser } from './api';
 import type {
   AdviceRequest,
+  SupportAction,
   Activity,
   AgendaEvent,
   Checkin,
@@ -54,6 +55,7 @@ const toPost = (r: Row): Post => ({
 
 const toAdvice = (r: Row): AdviceRequest => ({
   id: r.id,
+  trackId: r.track_id ?? 'respira',
   requesterId: r.requester_id,
   requesterName: r.requester_name,
   counselorId: r.counselor_id,
@@ -65,11 +67,6 @@ const toAdvice = (r: Row): AdviceRequest => ({
   updatedAt: r.updated_at,
 });
 
-/** Início do dia de hoje em Brasília, em ISO (para o limite diário de agradecimentos). */
-function startOfTodaySP(): string {
-  const sp = new Date(Date.now() - 3 * 3_600_000);
-  return new Date(Date.UTC(sp.getUTCFullYear(), sp.getUTCMonth(), sp.getUTCDate(), 3)).toISOString();
-}
 
 async function currentUserId(): Promise<string> {
   const { data } = await requireSupabase().auth.getUser();
@@ -177,6 +174,7 @@ export const supabaseApi: Api = {
         inSubscription: r.in_subscription,
         isFree: r.is_free,
         minKindnessLevel: r.min_kindness_level ?? null,
+        rewardOnly: Boolean(r.reward_only),
       })),
       modules: (check(modules) as Row[]).map((r) => ({ id: r.id, courseId: r.course_id, title: r.title, sort: r.sort })),
       lessons: (check(lessons) as Row[]).map((r) => ({
@@ -327,43 +325,120 @@ export const supabaseApi: Api = {
     check(await requireSupabase().from('reports').insert({ target_type: targetType, target_id: targetId, reason }));
   },
 
-  async getMyKindness() {
+  async validateContributions() {
+    // Melhor esforço: se a função não estiver publicada, a validação agendada pega depois.
+    await requireSupabase().functions.invoke('validate-contributions', { body: {} }).catch(() => undefined);
+  },
+
+  async getPointsSummary(trackId) {
     const sb = requireSupabase();
     const me = await currentUserId();
-    const [stats, level, given] = await Promise.all([
-      sb.rpc('kindness_stats', { p_user: me }).single(),
-      sb.rpc('kindness_level', { p_user: me }),
-      sb.from('thanks').select('id', { count: 'exact', head: true }).eq('giver_id', me).gte('created_at', startOfTodaySP()),
+    const [stats, level] = await Promise.all([
+      sb.rpc('points_stats', { p_user: me, p_track: trackId }).single(),
+      sb.rpc('kindness_level', { p_user: me, p_track: trackId }),
     ]);
     const s = check(stats) as Row;
-    return { points: s?.points ?? 0, givers: s?.givers ?? 0, level: (check(level) as number) ?? 1, givenToday: given.count ?? 0 };
+    return { earned: s?.earned ?? 0, givers: s?.givers ?? 0, spent: s?.spent ?? 0, balance: s?.balance ?? 0, level: (check(level) as number) ?? 1 };
   },
 
-  async getRewardClaims() {
-    const rows = check(await requireSupabase().from('reward_claims').select('*')) as Row[];
-    return rows.map((r) => ({ rewardId: r.reward_id, status: r.status, createdAt: r.created_at }));
+  async getPointEvents(trackId) {
+    const rows = check(
+      await requireSupabase().from('point_events').select('*').eq('track_id', trackId).order('created_at', { ascending: false }).limit(100),
+    ) as Row[];
+    return rows.map((r) => ({
+      id: r.id,
+      trackId: r.track_id,
+      kind: r.kind,
+      points: r.points,
+      status: r.status,
+      reason: r.reason,
+      actorName: r.actor_name,
+      createdAt: r.created_at,
+    }));
   },
 
-  async claimReward(rewardId) {
-    check(await requireSupabase().from('reward_claims').insert({ reward_id: rewardId }));
+  async getRedemptions() {
+    const rows = check(await requireSupabase().from('reward_redemptions').select('*').order('created_at', { ascending: false })) as Row[];
+    return rows.map((r) => ({ id: r.id, rewardId: r.reward_id, trackId: r.track_id, cost: r.cost, status: r.status, createdAt: r.created_at }));
   },
 
-  async listCounselors() {
-    const rows = check(await requireSupabase().rpc('list_counselors')) as Row[];
+  async redeemReward(rewardId) {
+    check(await requireSupabase().rpc('redeem_reward', { p_reward: rewardId }));
+  },
+
+  async getDailyLogs(trackId, days) {
+    const from = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+    const rows = check(
+      await requireSupabase().from('daily_logs').select('*').eq('track_id', trackId).gte('day', from).order('day', { ascending: false }),
+    ) as Row[];
+    return rows.map((r) => ({ day: r.day, trackId: r.track_id, kind: r.kind, data: r.data ?? {}, score: r.score, valid: r.valid }));
+  },
+
+  async saveDailyLog(log) {
+    const user_id = await currentUserId();
+    const day = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10);
+    check(
+      await requireSupabase().from('daily_logs').upsert(
+        { user_id, day, track_id: log.trackId, kind: log.kind, data: log.data, score: log.score, valid: log.valid },
+        { onConflict: 'user_id,day,track_id,kind' },
+      ),
+    );
+  },
+
+  async getSupportActions() {
+    const rows = check(await requireSupabase().from('support_actions').select('*').order('created_at', { ascending: false })) as Row[];
+    return rows.map(
+      (r): SupportAction => ({
+        id: r.id,
+        trackId: r.track_id,
+        postId: r.post_id,
+        helperId: r.helper_id,
+        helperName: r.helper_name,
+        helpedId: r.helped_id,
+        helpedName: r.helped_name,
+        mode: r.mode,
+        message: r.message,
+        items: r.items ?? [],
+        scheduledAt: r.scheduled_at,
+        status: r.status,
+        createdAt: r.created_at,
+      }),
+    );
+  },
+
+  async offerSupport(input) {
+    check(
+      await requireSupabase().from('support_actions').insert({
+        post_id: input.postId,
+        mode: input.mode,
+        message: input.message.trim(),
+        items: input.items.map((i) => i.trim()).filter(Boolean),
+        scheduled_at: input.scheduledAt,
+      }),
+    );
+  },
+
+  async setSupportStatus(id, status) {
+    check(await requireSupabase().from('support_actions').update({ status }).eq('id', id));
+  },
+
+  async listCounselors(trackId) {
+    const rows = check(await requireSupabase().rpc('list_counselors', { p_track: trackId })) as Row[];
     return rows.map((r) => ({ userId: r.user_id, name: r.display_name, bio: r.bio, topics: r.topics ?? [], level: r.level }));
   },
 
-  async getMyCounselorProfile() {
+  async getMyCounselorProfile(trackId) {
     const me = await currentUserId();
-    const r = check(await requireSupabase().from('counselors').select('*').eq('user_id', me).maybeSingle()) as Row | null;
+    const r = check(await requireSupabase().from('counselors').select('*').eq('user_id', me).eq('track_id', trackId).maybeSingle()) as Row | null;
     return r ? { bio: r.bio, topics: r.topics ?? [], isOpen: r.is_open } : null;
   },
 
-  async saveCounselorProfile(p) {
+  async saveCounselorProfile(trackId, p) {
     const me = await currentUserId();
     check(
       await requireSupabase().from('counselors').upsert({
         user_id: me,
+        track_id: trackId,
         bio: p.bio.trim(),
         topics: p.topics,
         is_open: p.isOpen,
@@ -377,9 +452,9 @@ export const supabaseApi: Api = {
     return rows.map(toAdvice);
   },
 
-  async createAdviceRequest(counselorId, topic, message) {
+  async createAdviceRequest(counselorId, trackId, topic, message) {
     const r = check(
-      await requireSupabase().from('advice_requests').insert({ counselor_id: counselorId, topic: topic.trim(), message: message.trim() }).select('id').single(),
+      await requireSupabase().from('advice_requests').insert({ counselor_id: counselorId, track_id: trackId, topic: topic.trim(), message: message.trim() }).select('id').single(),
     ) as Row;
     return r.id as string;
   },

@@ -14,6 +14,18 @@ Este é o **MVP de 01/12/2026**:
 - **Check-in de humor e sono:** só com consentimento (dado de saúde, LGPD art. 11).
 - **Privacidade:** o aluno exporta os próprios dados e apaga a conta dentro do app, como as lojas exigem.
 
+### Pontos, recompensas e o propósito de cada trilha (versão 4)
+
+- **Menus da trilha:** Hoje, Cursos, Comunidade, **Prêmios** e Perfil. A agenda saiu do menu: os compromissos do dia aparecem no Hoje (com "Ver agenda").
+- **Hoje com o propósito da trilha:** check-in, **plano do dia validado na hora** (ex.: Ritmo recusa mais de 3 prioridades e agenda que não cabe no dia; Prospera confere se os gastos previstos passam do limite; Move respeita a dor do check-in), prática, **fechamento do dia com nota de 0 a 100** (Ritmo: teste de produtividade; Respira: diário da noite; Prospera: fechamento financeiro; Move: corpo ativo e minutos da semana contra os 150 da OMS; Nutre: comida de verdade; Eleva: dia profissional; Aquecimento: três coisas boas) e gráfico de evolução de 14 dias. Regras em `src/domain/programs.ts`.
+- **Pontos de 1 a 5, por trilha e validados no servidor:** curtida 1, agradecimento 2, mensagem de ajuda 3, conselho/dica 4 e apoio a outra pessoa 5. Cada atividade conta poucas vezes por dia (10, 5, 3, 1 e 1): no máximo **38 pontos por dia** em cada trilha. Curtidas da mesma pessoa contam até 10 por mês, agradecimentos até 3, apoio à mesma pessoa uma vez por semana. Cada ponto vira uma linha no extrato, com o motivo quando não pontua.
+- **Validação das mensagens:** ajuda (mín. 40 caracteres) e conselho (mín. 80) passam por regras de esforço, repetição, ofensa, contato fora do app e sinal de risco (`supabase/functions/_shared/contribution.ts`). Com `ANTHROPIC_API_KEY` configurada, a função `validate-contributions` também pede a avaliação do Claude. Sinal de risco vira denúncia para a equipe.
+- **Apoio a outra pessoa (5 pontos):** em cada pedido de apoio aparece a ação da trilha: Respira e Aquecimento reservam um horário (entra na agenda dos dois); Ritmo monta o planejamento; Eleva, um plano de carreira de 30 dias; Prospera, um orçamento; Move combina um treino juntos; Nutre monta um cardápio. Os pontos só caem quando a pessoa ajudada confirma.
+- **Recompensas por trilha, resgatadas com pontos:** a mais barata custa **1.140 pontos (um mês fazendo tudo, todos os dias)**; as outras, 2, 3, 5, 6 e 12 meses, com nível mínimo. Conteúdo digital abre na hora em Cursos; prêmio físico vira pedido para a equipe. Resgatar não baixa o nível. Catálogo em `src/domain/rewards.ts`.
+- **Selos por trilha:** selo de bondade (nível na trilha) e **selo de aulas**, dividido em um pedaço por curso que se completa conforme as aulas são concluídas. A coleção de todas as trilhas fica no Perfil.
+
+Migração `20261107000000_pontos_por_trilha.sql` (extrato `point_events`, `daily_logs`, `support_actions`, `track_rewards`, `reward_redemptions`, conselheiros por trilha). Publique também a função: `supabase functions deploy validate-contributions` e agende-a a cada 5 minutos.
+
 ### App por trilha e comunidade (versão 3)
 
 - **Escolha da trilha primeiro:** a tela inicial mostra as trilhas do aluno, a Área de Aquecimento (grátis) e as outras trilhas com cadeado (levam à vitrine). Ao entrar, o app se molda à trilha: **Hoje, Cursos, Comunidade, Agenda e Perfil** só dela. O seletor no topo troca de trilha.
@@ -21,7 +33,7 @@ Este é o **MVP de 01/12/2026**:
 - **Resumo com alertas e socorro na hora:** se o estado é crítico (ex.: ansiedade 8+), um exercício guiado começa sozinho (respiração 4-6 e aterramento 5-4-3-2-1), depois o aluno marca de 0 a 10 como ficou. Alertas com CVV 188 e SAMU 192 quando cabe. Botão **Socorro** sempre no topo. Regras em `src/domain/checkin-protocol.ts`; exercícios em `src/domain/exercises.ts` (o campo `audioUrl` recebe a versão narrada pelo Edmilson).
 - **Hoje limpo, com jornada:** check-in primeiro e depois quatro passos (check-in, Escudo, aula do dia, comunidade), o curso atual e a próxima live.
 - **Comunidade em feed:** tipo do post (pedir apoio, desabafo, conquista, dica), sentimento, curtir, reagir com emojis, comentar, filtros (pedem apoio, sem resposta, mesmo sentimento que você hoje), denúncia e aviso de "ninguém respondeu ainda".
-- **Agradecer, níveis e prêmios:** o obrigado vale pontos (10; 20 quando quem pediu ajuda agradece; 30 no conselho). Oito níveis: Semente, Mão Amiga, Ombro Amigo, Coração Gentil, Ponte, Farol, Porto Seguro e Luz Vivah. Cada um exige pontos **e** pessoas diferentes; 10 agradecimentos por dia; da mesma pessoa contam 3 por mês. Prêmios: selo, aulas exclusivas, broche, copo, camiseta, mentoria e convite para imersão (`src/domain/kindness.ts`, que também gera o seed).
+- **Agradecer e níveis:** o obrigado vira ponto (ver versão 4). Oito níveis por trilha: Semente, Mão Amiga, Ombro Amigo, Coração Gentil, Ponte, Farol, Porto Seguro e Luz Vivah. Cada um exige pontos **e** pessoas diferentes (`src/domain/kindness.ts`).
 - **Conselheiros:** a partir do nível Farol, com código de conduta e Formação de Conselheiro. Pedido, aceite, conversa dentro do app, encerrar, agradecer e denunciar.
 
 Migração `20261106000000_trilha_comunidade.sql`: check-in por trilha, reações, agradecimentos (o banco decide quem recebe e quantos pontos), níveis, prêmios pedidos, cursos exclusivos por nível, conselheiros, conversas e denúncias. Tudo com RLS e testes.
@@ -139,12 +151,12 @@ O catálogo inicial (trilhas, cursos, aulas, produtos, lives, Escudo e diagnóst
 ```
 src/app/                 telas (Expo Router)
   index                  escolha da trilha (primeira tela)
-  t/[track]/             espaço da trilha: Hoje · Cursos · Comunidade · Agenda · Perfil
+  t/[track]/             espaço da trilha: Hoje · Cursos · Comunidade · Prêmios · Perfil
   trilha/ curso/ aula/   trilha → curso → aula
   live/ escudo/ post/    Área de Aquecimento e comunidade
   entrar, boas-vindas, diagnostico, checkin, evento, privacidade
   foco, buscar, conquistas, lembretes, favoritos, certificado/
-  checkin, socorro, publicar, bondade, conselheiros, conselheiro, conselho/
+  checkin, socorro, publicar, plano, fechamento, apoio, agenda, conselheiros, conselheiro, conselho/
 src/components/          componentes visuais (ui, players, vitrine, painel bloqueado)
 src/data/                catálogo, tipos, API (Supabase e demonstração) e hooks
 src/domain/              regras sem tela: acesso, datas de Brasília, agenda, diagnóstico,

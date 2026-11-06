@@ -15,7 +15,8 @@ import {
   products,
   tracks,
 } from '../src/data/catalog';
-import { KINDNESS_LEVELS, KINDNESS_REWARDS } from '../src/domain/kindness';
+import { KINDNESS_LEVELS } from '../src/domain/kindness';
+import { TRACK_REWARDS } from '../src/domain/rewards';
 import { buildEscudo, buildLives } from '../src/domain/schedule';
 
 /** Primeira live: quarta, 02/12/2026, dia seguinte ao lançamento. */
@@ -58,10 +59,11 @@ const sql = [
   insert('courses', courses.map((c) => ({
     id: c.id, track_id: c.trackId, title: c.title, kind: c.kind, summary: c.summary,
     price_label: c.priceLabel, sort: c.sort, in_subscription: c.inSubscription, is_free: c.isFree,
-    min_kindness_level: c.minKindnessLevel,
+    min_kindness_level: c.minKindnessLevel, reward_only: c.rewardOnly,
   }))),
-  insert('kindness_rewards', KINDNESS_REWARDS.map((r) => ({
-    id: r.id, level: r.level, kind: r.kind, title: r.title, description: r.description, course_id: r.courseId ?? null,
+  insert('track_rewards', TRACK_REWARDS.map((r) => ({
+    id: r.id, track_id: r.trackId, kind: r.kind, title: r.title, description: r.description, cost: r.cost,
+    min_level: r.minLevel, course_id: r.courseId ?? null,
   }))),
   insert('modules', modules.map((m) => ({ id: m.id, course_id: m.courseId, title: m.title, sort: m.sort }))),
   insert('lessons', lessons.map((l) => ({

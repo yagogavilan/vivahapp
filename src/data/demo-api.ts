@@ -7,7 +7,11 @@ import { addDays, dayKey, spDateTime } from '../domain/dates';
 import { buildEscudo, buildLives } from '../domain/schedule';
 import type { Api, SessionUser } from './api';
 import { courses, diagnosticQuestions, lessonMedia, lessons, modules, products, tracks } from './catalog';
-import { computeKindness, levelFor, THANK_POINTS, THANKS_PER_DAY, type ThankRecord } from '../domain/kindness';
+import { judgeContribution } from '../../supabase/functions/_shared/contribution';
+import { levelFor } from '../domain/kindness';
+import { RULES } from '../domain/points';
+import { TRACK_REWARDS } from '../domain/rewards';
+import { award, type AwardInput, type LedgerEvent, statsOf } from './demo-points';
 import type {
   Activity,
   AdviceMessage,
@@ -22,7 +26,9 @@ import type {
   Post,
   Profile,
   ReactionKind,
-  RewardClaim,
+  DailyLog,
+  Redemption,
+  SupportAction,
 } from './types';
 import { communitySeed, DEMO_PEOPLE, type DemoComment, type DemoPost } from './demo-community';
 
@@ -41,9 +47,13 @@ function initialState() {
     lives: buildLives(addDays(t, -7)),
     escudo: buildEscudo(addDays(t, -6), 7),
     ...communitySeed(),
-    thanks: [] as (ThankRecord & { target: string })[],
-    claims: [] as RewardClaim[],
-    counselor: null as CounselorProfile | null,
+    /** Quem agradeceu o quê (para não agradecer duas vezes). */
+    thanks: [] as { id: string; giverId: string; receiverId: string; target: string; createdAt: string }[],
+    ledger: [] as LedgerEvent[],
+    redemptions: [] as Redemption[],
+    logs: [] as DailyLog[],
+    support: [] as SupportAction[],
+    counselors: {} as Record<string, CounselorProfile>,
     advice: [] as AdviceRequest[],
     adviceMessages: [] as AdviceMessage[],
     agenda: [
@@ -70,12 +80,35 @@ function me(): SessionUser {
 
 const firstName = () => state.profile?.fullName?.split(' ')[0] || 'Aluno Vivah';
 
-function levelOf(userId: string): number {
+const nameOf = (id: string | null) =>
+  !id ? null : id === state.user?.id ? firstName() : DEMO_PEOPLE.find((p) => p.id === id)?.name ?? 'Aluno Vivah';
+
+function levelOf(userId: string, trackId: string): number {
   const person = DEMO_PEOPLE.find((p) => p.id === userId);
   if (person) return person.level;
-  const { points, givers } = computeKindness(state.thanks, userId);
-  return levelFor(points, givers).level;
+  const { earned, givers } = statsOf(state.ledger, userId, trackId);
+  return levelFor(earned, givers).level;
 }
+
+function give(input: Omit<AwardInput, 'day' | 'now' | 'actorName'>) {
+  const ev = award(state.ledger, { ...input, actorName: nameOf(input.actorId), day: today(), now: new Date().toISOString() });
+  if (ev) state.ledger = [ev, ...state.ledger];
+  return ev;
+}
+
+/** Valida na hora o texto que vale pontos (no servidor, quem faz isso é a função validate-contributions). */
+function validatePending() {
+  state.ledger = state.ledger.map((e) => {
+    if (e.status !== 'pendente') return e;
+    const kind = e.kind === 'ajuda' ? 'ajuda' : 'conselho';
+    const body = e.commentId ? state.comments.find((c) => c.id === e.commentId)?.body : state.posts.find((p) => p.id === e.postId)?.body;
+    const verdict = judgeContribution(kind, body ?? '');
+    return verdict.ok ? { ...e, status: 'valido' as const, reason: verdict.reason } : { ...e, status: 'recusado' as const, points: 0, reason: verdict.reason };
+  });
+}
+
+const spentOf = (userId: string, trackId: string) =>
+  userId === state.user?.id ? state.redemptions.filter((r) => r.trackId === trackId && r.status !== 'cancelado').reduce((s, r) => s + r.cost, 0) : 0;
 
 function toPost(p: DemoPost): Post {
   const reactions: Partial<Record<ReactionKind, number>> = {};
@@ -87,7 +120,7 @@ function toPost(p: DemoPost): Post {
     channel: p.channel,
     authorId: p.authorId,
     authorName: p.authorName,
-    authorLevel: levelOf(p.authorId),
+    authorLevel: levelOf(p.authorId, p.channel),
     body: p.body,
     kind: p.kind,
     feeling: p.feeling,
@@ -102,12 +135,40 @@ function toPost(p: DemoPost): Post {
 
 function toComment(c: DemoComment): Comment {
   const key = `comment:${c.id}`;
+  const channel = state.posts.find((p) => p.id === c.postId)?.channel ?? 'aquecimento';
   return {
     ...c,
-    authorLevel: levelOf(c.authorId),
+    authorLevel: levelOf(c.authorId, channel),
     thanksCount: state.thanks.filter((t) => t.target === key).length,
     iThanked: state.thanks.some((t) => t.target === key && t.giverId === state.user?.id),
   };
+}
+
+/**
+ * Histórico de exemplo da aluna: algumas semanas ajudando na Respira (perto do
+ * nível Mão Amiga, longe da primeira recompensa) e notas de fechamento do dia.
+ */
+function seedHistory() {
+  const people = ['demo-marina', 'demo-carlos', 'demo-juliana', 'demo-rafa', 'demo-bea', 'demo-leo', 'demo-paula', 'demo-edmilson'];
+  const kinds: [LedgerEvent['kind'], number][] = [['curtida', 1], ['agradecimento', 2], ['ajuda', 3], ['conselho', 4], ['apoio', 5]];
+  const t = today();
+  for (let d = 1; d <= 24; d++) {
+    const day = addDays(t, -d);
+    kinds.forEach(([kind, points], k) => {
+      if ((d + k) % 3 === 0) return;
+      state.ledger.push({
+        id: `h-${d}-${k}`, userId: 'demo-user', actorId: kind === 'conselho' ? null : people[(d + k) % people.length],
+        actorName: kind === 'conselho' ? null : nameOf(people[(d + k) % people.length]), trackId: 'respira', kind, points,
+        status: 'valido', reason: null, day, createdAt: spDateTime(day, '12:00'),
+      });
+    });
+  }
+  const scores: Record<string, number[]> = { respira: [48, 55, 52, 61, 58, 66, 70, 63, 72, 69, 75, 78, 74], aquecimento: [60, 70, 65, 80] };
+  for (const [trackId, list] of Object.entries(scores)) {
+    list.forEach((score, i) => {
+      state.logs.push({ day: addDays(t, -(list.length - i)), trackId, kind: 'fechamento', data: {}, score, valid: true });
+    });
+  }
 }
 
 export const demoApi: Api = {
@@ -129,10 +190,7 @@ export const demoApi: Api = {
     if (code.trim() !== DEMO_CODE) throw new Error(`No modo demonstração, o código é ${DEMO_CODE}.`);
     const fresh = initialState();
     state = { ...fresh, user: { id: 'demo-user', email: email.trim().toLowerCase() } };
-    // Quatro pessoas já agradeceram a aluna da demonstração: falta pouco para o nível Mão Amiga.
-    state.thanks = ['demo-marina', 'demo-carlos', 'demo-juliana', 'demo-rafa'].map((giverId, i) => ({
-      giverId, receiverId: 'demo-user', points: 10, createdAt: new Date(Date.now() - (i + 2) * 86_400_000).toISOString(), target: `old:${i}`,
-    }));
+    seedHistory();
     state.profile = { id: 'demo-user', email: state.user!.email, fullName: null, goal: null, healthConsentAt: null, onboardedAt: null, preferences: { showStreak: true, liveReminders: true, dailyReminder: null } };
     emit();
   },
@@ -170,7 +228,10 @@ export const demoApi: Api = {
       atividade: state.activity,
       publicacoes: state.posts.filter((p) => p.authorId === state.user?.id),
       agradecimentos: state.thanks.filter((t) => t.giverId === state.user?.id || t.receiverId === state.user?.id),
-      premios: state.claims,
+      pontos: state.ledger.filter((e) => e.userId === state.user?.id),
+      resgates: state.redemptions,
+      planos_e_fechamentos: state.logs,
+      apoios: state.support,
       conselhos: state.advice,
     };
   },
@@ -180,9 +241,14 @@ export const demoApi: Api = {
     return { tracks, courses, modules, lessons, products };
   },
   async getMyCourseIds() {
-    const level = state.user ? levelOf(state.user.id) : 1;
-    const exclusive = courses.filter((c) => c.minKindnessLevel != null && level >= c.minKindnessLevel).map((c) => c.id);
-    return [...courses.filter((c) => c.isFree).map((c) => c.id), ...state.owned, ...exclusive];
+    const uid_ = state.user?.id;
+    const maxLevel = uid_ ? Math.max(1, ...tracks.map((t) => levelOf(uid_, t.id)), levelOf(uid_, 'aquecimento')) : 1;
+    const exclusive = courses.filter((c) => c.minKindnessLevel != null && maxLevel >= c.minKindnessLevel).map((c) => c.id);
+    const redeemed = state.redemptions
+      .filter((r) => r.status !== 'cancelado')
+      .map((r) => TRACK_REWARDS.find((x) => x.id === r.rewardId)?.courseId)
+      .filter((x): x is string => Boolean(x));
+    return [...courses.filter((c) => c.isFree).map((c) => c.id), ...state.owned, ...exclusive, ...redeemed];
   },
   async getLessonMedia(lessonId) {
     const lesson = lessons.find((l) => l.id === lessonId);
@@ -223,13 +289,24 @@ export const demoApi: Api = {
   },
   async createPost(channel, body, kind = 'desabafo', feeling = null) {
     const u = me();
+    const id = uid();
     state.posts = [
-      { id: uid(), channel, authorId: u.id, authorName: firstName(), body: body.trim(), kind, feeling, createdAt: new Date().toISOString(), reactions: [] },
+      { id, channel, authorId: u.id, authorName: firstName(), body: body.trim(), kind, feeling, createdAt: new Date().toISOString(), reactions: [] },
       ...state.posts,
     ];
+    // Conselho/dica: 4 pontos depois da validação (a comunidade é quem "gera" o ponto).
+    if (kind === 'dica') {
+      const used = state.ledger.filter((e) => e.userId === u.id && e.trackId === channel && e.kind === 'conselho' && e.day === today() && e.status !== 'recusado').length;
+      state.ledger = [{
+        id: uid(), userId: u.id, actorId: null, actorName: null, trackId: channel, kind: 'conselho', points: used ? 0 : 4,
+        status: used ? 'recusado' : 'pendente', reason: used ? 'Limite diário desta atividade atingido.' : null,
+        day: today(), createdAt: new Date().toISOString(), postId: id,
+      }, ...state.ledger];
+    }
   },
   async deletePost(id) {
     state.posts = state.posts.filter((p) => p.id !== id || p.authorId !== state.user?.id);
+    state.ledger = state.ledger.filter((e) => e.postId !== id || e.kind !== 'conselho');
   },
   async getComments(postId) {
     return state.comments
@@ -240,17 +317,29 @@ export const demoApi: Api = {
   async createComment(postId, body) {
     const u = me();
     const id = uid();
+    const post = state.posts.find((p) => p.id === postId);
     state.comments = [
       ...state.comments,
       { id, postId, authorId: u.id, authorName: firstName(), body: body.trim(), createdAt: new Date().toISOString() },
     ];
-    // Na demonstração, quem pediu ajuda agradece a resposta: dá para ver os pontos subirem.
-    const post = state.posts.find((p) => p.id === postId);
-    if (post && post.authorId !== u.id && post.authorId.startsWith('demo-')) {
-      state.thanks = [
-        ...state.thanks,
-        { giverId: post.authorId, receiverId: u.id, points: THANK_POINTS.fromPostAuthor, createdAt: new Date().toISOString(), target: `comment:${id}` },
-      ];
+    if (!post || post.authorId === u.id) return;
+    // Mensagem de ajuda: só a primeira em cada post pontua (3 pontos depois da validação).
+    const already = state.ledger.some(
+      (e) => e.userId === u.id && e.kind === 'ajuda' && e.status !== 'recusado' && state.comments.find((c) => c.id === e.commentId)?.postId === postId,
+    );
+    if (already) {
+      state.ledger = [{
+        id: uid(), userId: u.id, actorId: post.authorId, actorName: nameOf(post.authorId), trackId: post.channel, kind: 'ajuda', points: 0,
+        status: 'recusado', reason: 'Só a primeira mensagem em cada publicação pontua.', day: today(), createdAt: new Date().toISOString(), commentId: id,
+      }, ...state.ledger];
+    } else {
+      give({ userId: u.id, actorId: post.authorId, trackId: post.channel, kind: 'ajuda', status: 'pendente', refs: { commentId: id, postId } });
+    }
+    // Na demonstração, quem pediu ajuda agradece a resposta (2 pontos).
+    if (post.authorId.startsWith('demo-')) {
+      const thankId = uid();
+      state.thanks = [...state.thanks, { id: thankId, giverId: post.authorId, receiverId: u.id, target: `comment:${id}`, createdAt: new Date().toISOString() }];
+      give({ userId: u.id, actorId: post.authorId, trackId: post.channel, kind: 'agradecimento', status: 'valido', refs: { thankId } });
     }
   },
   async setReaction(postId, kind, on) {
@@ -260,68 +349,174 @@ export const demoApi: Api = {
       const rest = p.reactions.filter((r) => !(r.userId === u.id && r.kind === kind));
       return { ...p, reactions: on ? [...rest, { userId: u.id, kind }] : rest };
     });
+    const post = state.posts.find((p) => p.id === postId);
+    if (kind !== 'like' || !post) return;
+    if (on) {
+      if (!state.ledger.some((e) => e.kind === 'curtida' && e.postId === postId && e.actorId === u.id)) {
+        give({ userId: post.authorId, actorId: u.id, trackId: post.channel, kind: 'curtida', status: 'valido', refs: { postId } });
+      }
+    } else {
+      state.ledger = state.ledger.filter((e) => !(e.kind === 'curtida' && e.postId === postId && e.actorId === u.id));
+    }
   },
   async thank(target) {
     const u = me();
     const key = `${target.type}:${target.id}`;
     if (state.thanks.some((t) => t.giverId === u.id && t.target === key)) throw new Error('Você já agradeceu.');
-    if (state.thanks.filter((t) => t.giverId === u.id && t.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length >= THANKS_PER_DAY) {
+    if (state.thanks.filter((t) => t.giverId === u.id && t.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length >= RULES.agradecimentosDadosPorDia) {
       throw new Error('Você já deu 10 agradecimentos hoje. Amanhã tem mais.');
     }
     let receiverId: string | undefined;
-    let points: number = THANK_POINTS.item;
-    if (target.type === 'post') receiverId = state.posts.find((p) => p.id === target.id)?.authorId;
+    let trackId = 'aquecimento';
+    if (target.type === 'post') {
+      const p = state.posts.find((x) => x.id === target.id);
+      receiverId = p?.authorId;
+      trackId = p?.channel ?? trackId;
+    }
     if (target.type === 'comment') {
       const c = state.comments.find((x) => x.id === target.id);
       receiverId = c?.authorId;
-      if (c && state.posts.find((p) => p.id === c.postId)?.authorId === u.id) points = THANK_POINTS.fromPostAuthor;
+      trackId = state.posts.find((p) => p.id === c?.postId)?.channel ?? trackId;
     }
     if (target.type === 'advice') {
-      receiverId = state.advice.find((a) => a.id === target.id)?.counselorId;
-      points = THANK_POINTS.advice;
+      const a = state.advice.find((x) => x.id === target.id);
+      receiverId = a?.counselorId;
+      trackId = a?.trackId ?? trackId;
     }
     if (!receiverId) throw new Error('Não encontrado.');
     if (receiverId === u.id) throw new Error('Não dá para agradecer a si mesmo.');
-    state.thanks = [...state.thanks, { giverId: u.id, receiverId, points, createdAt: new Date().toISOString(), target: key }];
+    const thankId = uid();
+    state.thanks = [...state.thanks, { id: thankId, giverId: u.id, receiverId, target: key, createdAt: new Date().toISOString() }];
+    give({ userId: receiverId, actorId: u.id, trackId, kind: 'agradecimento', status: 'valido', refs: { thankId } });
   },
   async report() {
     await wait();
   },
 
-  async getMyKindness() {
+  async validateContributions() {
+    await wait(300);
+    validatePending();
+  },
+  async getPointsSummary(trackId) {
     const u = me();
-    const { points, givers } = computeKindness(state.thanks, u.id);
-    const givenToday = state.thanks.filter((t) => t.giverId === u.id && t.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
-    return { points, givers, level: levelFor(points, givers).level, givenToday };
+    const { earned, givers } = statsOf(state.ledger, u.id, trackId);
+    const spent = spentOf(u.id, trackId);
+    return { earned, givers, spent, balance: earned - spent, level: levelFor(earned, givers).level };
   },
-  async getRewardClaims() {
-    return [...state.claims];
+  async getPointEvents(trackId) {
+    const u = me();
+    return state.ledger
+      .filter((e) => e.userId === u.id && e.trackId === trackId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 100)
+      .map(({ id, trackId: t, kind, points, status, reason, actorName, createdAt }) => ({ id, trackId: t, kind, points, status, reason, actorName, createdAt }));
   },
-  async claimReward(rewardId) {
-    if (state.claims.some((c) => c.rewardId === rewardId)) return;
-    state.claims = [...state.claims, { rewardId, status: 'solicitado', createdAt: new Date().toISOString() }];
+  async getRedemptions() {
+    return [...state.redemptions];
+  },
+  async redeemReward(rewardId) {
+    const u = me();
+    const r = TRACK_REWARDS.find((x) => x.id === rewardId);
+    if (!r) throw new Error('Recompensa não encontrada.');
+    if (r.kind === 'acesso') throw new Error('Este acesso abre sozinho quando você chega ao nível.');
+    if (state.redemptions.some((x) => x.rewardId === rewardId && x.status !== 'cancelado')) throw new Error('Você já resgatou esta recompensa.');
+    const s = await demoApi.getPointsSummary(r.trackId);
+    if (s.level < r.minLevel) throw new Error('Esta recompensa pede um nível maior nesta trilha.');
+    if (s.balance < r.cost) throw new Error(`Faltam ${r.cost - s.balance} pontos para esta recompensa.`);
+    state.redemptions = [
+      { id: uid(), rewardId, trackId: r.trackId, cost: r.cost, status: r.kind === 'fisico' ? 'solicitado' : 'liberado', createdAt: new Date().toISOString() },
+      ...state.redemptions,
+    ];
+    void u;
   },
 
-  async listCounselors() {
-    await wait();
-    return DEMO_PEOPLE.filter((p) => p.counselor).map((p) => ({ userId: p.id, name: p.name, bio: p.counselor!.bio, topics: p.counselor!.topics, level: p.level }));
+  async getDailyLogs(trackId, days) {
+    const from = addDays(today(), -days);
+    return state.logs.filter((l) => l.trackId === trackId && l.day >= from).sort((a, b) => b.day.localeCompare(a.day));
   },
-  async getMyCounselorProfile() {
-    return state.counselor;
+  async saveDailyLog(log) {
+    me();
+    const day = today();
+    state.logs = [...state.logs.filter((l) => !(l.day === day && l.trackId === log.trackId && l.kind === log.kind)), { ...log, day }];
   },
-  async saveCounselorProfile(profile) {
+
+  async getSupportActions() {
     const u = me();
-    const { points, givers } = computeKindness(state.thanks, u.id);
-    if (levelFor(points, givers).level < 6) throw new Error('O espaço de conselheiro abre no nível Farol.');
-    state.counselor = profile;
+    return state.support.filter((s) => s.helperId === u.id || s.helpedId === u.id);
+  },
+  async offerSupport(input) {
+    const u = me();
+    const post = state.posts.find((p) => p.id === input.postId);
+    if (!post) throw new Error('Publicação não encontrada.');
+    if (post.kind !== 'apoio') throw new Error('Apoio só pode ser oferecido em pedidos de apoio.');
+    if (post.authorId === u.id) throw new Error('Você não pode oferecer apoio para si mesmo.');
+    if (state.support.some((s) => s.postId === post.id && s.helperId === u.id && (s.status === 'oferecido' || s.status === 'aceito'))) {
+      throw new Error('Você já ofereceu apoio neste pedido.');
+    }
+    const items = input.items.map((i) => i.trim()).filter(Boolean);
+    if (input.mode === 'plano' && (items.length < 2 || items.length > 12 || items.some((i) => i.length < 3 || i.length > 200))) {
+      throw new Error('Monte de 2 a 12 itens, cada um com 3 a 200 caracteres.');
+    }
+    if (input.mode === 'agenda') {
+      const at = input.scheduledAt ? Date.parse(input.scheduledAt) : NaN;
+      if (!(at >= Date.now() + 30 * 60_000 && at <= Date.now() + 14 * 86_400_000)) {
+        throw new Error('Escolha um horário entre daqui a 30 minutos e os próximos 14 dias.');
+      }
+    }
+    const action: SupportAction = {
+      id: uid(), trackId: post.channel, postId: post.id, helperId: u.id, helperName: firstName(), helpedId: post.authorId,
+      helpedName: post.authorName, mode: input.mode, message: input.message.trim(), items, scheduledAt: input.mode === 'agenda' ? input.scheduledAt : null,
+      status: 'oferecido', createdAt: new Date().toISOString(),
+    };
+    state.support = [action, ...state.support];
+    // Na demonstração, a pessoa ajudada aceita na hora; um plano ela já confirma que ajudou.
+    if (post.authorId.startsWith('demo-')) {
+      action.status = 'aceito';
+      if (action.mode === 'agenda' && action.scheduledAt) {
+        state.agenda = [...state.agenda, {
+          id: uid(), title: `Apoio a ${action.helpedName}`, kind: 'pessoal', startsAt: action.scheduledAt,
+          endsAt: new Date(Date.parse(action.scheduledAt) + 30 * 60_000).toISOString(), liveId: null, notes: null,
+        }];
+      } else {
+        action.status = 'concluido';
+        give({ userId: u.id, actorId: post.authorId, trackId: post.channel, kind: 'apoio', status: 'valido', refs: { supportId: action.id } });
+      }
+    }
+  },
+  async setSupportStatus(id, status) {
+    const u = me();
+    const s = state.support.find((x) => x.id === id);
+    if (!s) throw new Error('Apoio não encontrado.');
+    const ok =
+      (u.id === s.helpedId && s.status === 'oferecido' && (status === 'aceito' || status === 'recusado')) ||
+      (u.id === s.helpedId && s.status === 'aceito' && status === 'concluido' && (s.mode === 'plano' || Date.parse(s.scheduledAt ?? '') <= Date.now())) ||
+      (u.id === s.helperId && (s.status === 'oferecido' || s.status === 'aceito') && status === 'cancelado');
+    if (!ok) throw new Error('Mudança não permitida. Num horário marcado, confirme só depois que ele acontecer.');
+    state.support = state.support.map((x) => (x.id === id ? { ...x, status } : x));
+    if (status === 'concluido') give({ userId: s.helperId, actorId: s.helpedId, trackId: s.trackId, kind: 'apoio', status: 'valido', refs: { supportId: id } });
+  },
+
+  async listCounselors(trackId) {
+    await wait();
+    return DEMO_PEOPLE.filter((p) => p.counselor?.tracks.includes(trackId)).map((p) => ({
+      userId: p.id, name: p.name, bio: p.counselor!.bio, topics: p.counselor!.topics, level: p.level,
+    }));
+  },
+  async getMyCounselorProfile(trackId) {
+    return state.counselors[trackId] ?? null;
+  },
+  async saveCounselorProfile(trackId, profile) {
+    const u = me();
+    if (levelOf(u.id, trackId) < 6) throw new Error('O espaço de conselheiro abre no nível Farol desta trilha.');
+    state.counselors = { ...state.counselors, [trackId]: profile };
   },
   async getAdviceRequests() {
     return [...state.advice].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   },
-  async createAdviceRequest(counselorId, topic, message) {
+  async createAdviceRequest(counselorId, trackId, topic, message) {
     const u = me();
     const counselor = DEMO_PEOPLE.find((p) => p.id === counselorId);
-    if (!counselor?.counselor) throw new Error('Este conselheiro não está recebendo pedidos agora.');
+    if (!counselor?.counselor?.tracks.includes(trackId)) throw new Error('Este conselheiro não está recebendo pedidos agora.');
     if (state.advice.filter((a) => a.requesterId === u.id && (a.status === 'pendente' || a.status === 'aceito')).length >= 3) {
       throw new Error('Você já tem 3 conversas abertas. Encerre uma para pedir outra.');
     }
@@ -329,7 +524,7 @@ export const demoApi: Api = {
     const id = uid();
     // Na demonstração, a conselheira aceita na hora e responde.
     state.advice = [
-      { id, requesterId: u.id, requesterName: firstName(), counselorId, counselorName: counselor.name, topic: topic.trim(), message: message.trim(), status: 'aceito', createdAt: now, updatedAt: now },
+      { id, trackId, requesterId: u.id, requesterName: firstName(), counselorId, counselorName: counselor.name, topic: topic.trim(), message: message.trim(), status: 'aceito', createdAt: now, updatedAt: now },
       ...state.advice,
     ];
     state.adviceMessages = [

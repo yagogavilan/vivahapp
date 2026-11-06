@@ -18,6 +18,7 @@ import type {
   Product,
   Track,
 } from './types';
+import { rewardCourseTrack, TRACK_REWARDS } from '../domain/rewards';
 
 export const AREA_LABEL: Record<LifeArea, string> = {
   mente: 'Mente',
@@ -137,7 +138,7 @@ const c = (
   price: number | null,
   summary: string,
   modules: CourseSeed['modules'],
-  opts: { inSubscription?: boolean; isFree?: boolean; priceLabel?: string; minKindnessLevel?: number } = {},
+  opts: { inSubscription?: boolean; isFree?: boolean; priceLabel?: string; minKindnessLevel?: number; rewardOnly?: boolean } = {},
 ): CourseSeed => ({
   id,
   trackId,
@@ -149,6 +150,7 @@ const c = (
   inSubscription: opts.inSubscription ?? false,
   isFree: opts.isFree ?? false,
   minKindnessLevel: opts.minKindnessLevel ?? null,
+  rewardOnly: opts.rewardOnly ?? false,
   modules,
 });
 
@@ -274,19 +276,7 @@ const courseSeeds: CourseSeed[] = [
   c('nutre', 'nutre-individual', 'Nutre Individual', 'acompanhamento', 1497,
     'Consulta e plano alimentar individual com nutricionista, com dois retornos.',
     emProducao(['Como funciona o acompanhamento'])),
-  // ——— Exclusivos por nível de bondade (não são vendidos) ———
-  c('respira', 'escuta-que-acolhe', 'Escuta que Acolhe', 'bonus', null,
-    'Como ajudar alguém na comunidade sem dar sermão nem conselho apressado.',
-    [{ title: 'A arte de escutar', lessons: [
-      ['Escutar não é resolver', 'video', 10], ['Perguntas que abrem espaço', 'video', 10], ['O que nunca dizer', 'video', 8],
-    ] }],
-    { minKindnessLevel: 3 }),
-  c('respira', 'roda-dos-gentis', 'Roda dos Gentis', 'acompanhamento', null,
-    'Encontro ao vivo mensal, fechado, com o Edmilson e os Corações Gentis.',
-    emProducao(['Gravações das rodas']), { minKindnessLevel: 4 }),
-  c('respira', 'conversas-dificeis', 'Conversas Difíceis', 'bonus', null,
-    'Como apoiar alguém em crise, colocar limites e saber a hora de encaminhar para ajuda profissional.',
-    emProducao(['Quando alguém está em crise', 'Limites de quem ajuda', 'Como encaminhar']), { minKindnessLevel: 5 }),
+  // ——— Formação de Conselheiro: abre no nível Farol (em qualquer trilha) ———
   c('respira', 'formacao-conselheiro', 'Formação de Conselheiro', 'bonus', null,
     'Obrigatória antes de abrir o espaço de conselheiro: papel, limites e código de conduta.',
     [{ title: 'Formação', lessons: [
@@ -294,13 +284,14 @@ const courseSeeds: CourseSeed[] = [
       ['Sinais de risco e como encaminhar (CVV 188)', 'video', 12],
     ] }],
     { minKindnessLevel: 6 }),
-  c('respira', 'mentoria-porto-seguro', 'Mentoria Porto Seguro', 'acompanhamento', null,
-    'Mentoria em grupo, uma vez por trimestre, com o Edmilson.',
-    emProducao(['Gravações da mentoria']), { minKindnessLevel: 7 }),
+  // ——— Recompensas de conteúdo (resgatadas com pontos) ———
+  ...TRACK_REWARDS.filter((r) => r.courseId).map((r) =>
+    c(rewardCourseTrack(r.trackId), r.courseId!, r.title.replace(/^Aula exclusiva: /, ''), r.kind === 'experiencia' ? 'acompanhamento' : 'bonus', null,
+      r.description, emProducao(r.topics ?? ['Conteúdo em produção']), { rewardOnly: true })),
 ];
 
 /** Cursos que são vendidos (fora os exclusivos por nível de bondade). */
-const sellable = () => courseSeeds.filter((x) => x.minKindnessLevel == null);
+const sellable = () => courseSeeds.filter((x) => x.minKindnessLevel == null && !x.rewardOnly);
 
 export const courses: Course[] = courseSeeds.map(({ modules: _m, price: _p, ...rest }, i) => ({ ...rest, sort: i + 1 }));
 

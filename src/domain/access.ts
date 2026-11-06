@@ -26,7 +26,7 @@ export function lessonOpen(lesson: Lesson, state: CourseState): boolean {
  */
 export function trackState(track: Track, trackCourses: Course[], access: ReadonlySet<string>): CourseState {
   if (track.status === 'soon') return 'soon';
-  return trackCourses.some((c) => !c.isFree && c.minKindnessLevel == null && access.has(c.id)) ? 'open' : 'locked';
+  return trackCourses.some((c) => !c.isFree && c.minKindnessLevel == null && !c.rewardOnly && access.has(c.id)) ? 'open' : 'locked';
 }
 
 /** Percentual de aulas concluídas, 0–100. */

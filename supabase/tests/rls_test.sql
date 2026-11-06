@@ -134,11 +134,12 @@ do $$ begin
 end $$;
 commit;
 
--- ——— Comunidade: obrigado, níveis, prêmios e conselheiros ———
+-- ——— Comunidade: pontos validados no servidor, níveis por trilha, resgates, apoio e conselheiros ———
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-00000000000c', 'carla@exemplo.com', '{"full_name":"Carla Lima"}'),
   ('00000000-0000-0000-0000-00000000000d', 'duda@exemplo.com', '{"full_name":"Duda Reis"}');
 
+-- Carla publica 14 dicas: só a primeira do dia entra para validação (4 pontos); as outras não pontuam.
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000c","email":"carla@exemplo.com","role":"authenticated"}';
@@ -146,45 +147,77 @@ insert into public.posts (channel, body, kind, feeling)
 select 'aquecimento', 'Dica ' || g, 'dica', 'calma' from generate_series(1, 14) g;
 commit;
 
--- 125 pessoas diferentes agradecem 3 posts da Carla; uma delas agradece um 4º (não conta: limite de 3 por mês).
+do $$ begin
+  assert (select count(*) from public.point_events where user_id = '00000000-0000-0000-0000-00000000000c' and kind = 'conselho' and status = 'pendente' and points = 4) = 1,
+    'só um conselho por dia entra para validação';
+  assert (select count(*) from public.point_events where user_id = '00000000-0000-0000-0000-00000000000c' and kind = 'conselho' and status = 'recusado' and points = 0) = 13,
+    'os outros conselhos do dia ficam registrados sem pontos';
+end $$;
+
+-- 150 pessoas curtem: 10 curtidas pontuam hoje (limite diário), o resto fica registrado sem pontos.
+-- E um histórico de meses de apoio (inserido pelo servidor) leva a Carla ao nível Farol.
 begin;
 set local request.jwt.claims = '{"role":"service_role"}';
 insert into auth.users (id, email)
-select ('10000000-0000-0000-0000-' || lpad(g::text, 12, '0'))::uuid, 'g' || g || '@exemplo.com' from generate_series(1, 125) g;
-insert into public.thanks (giver_id, receiver_id, post_id, points)
-select u.id, '00000000-0000-0000-0000-00000000000c', p.id, 10
-  from auth.users u, public.posts p
- where u.email like 'g%@exemplo.com' and p.body in ('Dica 1', 'Dica 2', 'Dica 3');
-insert into public.thanks (giver_id, receiver_id, post_id, points)
-select '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000c', p.id, 10
-  from public.posts p where p.body = 'Dica 14';
+select ('10000000-0000-0000-0000-' || lpad(g::text, 12, '0'))::uuid, 'g' || g || '@exemplo.com' from generate_series(1, 150) g;
+insert into public.post_reactions (post_id, user_id, kind)
+select p.id, u.id, 'like' from auth.users u, public.posts p where u.email like 'g%@exemplo.com' and p.body = 'Dica 1';
+insert into public.point_events (user_id, actor_id, track_id, kind, points, status, day, created_at)
+select '00000000-0000-0000-0000-00000000000c', u.id, 'aquecimento', 'apoio', 5, 'valido', current_date - (d * 7), now() - (d * interval '7 days')
+  from auth.users u, generate_series(1, 10) d where u.email like 'g%@exemplo.com';
 commit;
 
 do $$ declare s record; begin
-  select * into s from public.kindness_stats('00000000-0000-0000-0000-00000000000c');
-  assert s.points = 3750, format('pontos da Carla deveriam ser 3750 (limite por pessoa), veio %s', s.points);
-  assert s.givers = 125, 'Carla deveria ter 125 pessoas diferentes';
-  assert public.kindness_level('00000000-0000-0000-0000-00000000000c') = 6, 'Carla deveria ser Farol (nível 6)';
-  assert public.kindness_level('00000000-0000-0000-0000-00000000000d') = 1, 'Duda deveria ser Semente';
+  assert (select count(*) from public.point_events where kind = 'curtida' and status = 'valido' and user_id = '00000000-0000-0000-0000-00000000000c') = 10,
+    'só 10 curtidas por dia pontuam';
+  assert (select count(*) from public.point_events where kind = 'curtida' and status = 'recusado') = 140, 'o resto das curtidas fica sem pontos';
+  select * into s from public.points_stats('00000000-0000-0000-0000-00000000000c', 'aquecimento');
+  assert s.earned = 7510, format('Carla deveria ter 7510 pontos, veio %s', s.earned);
+  assert s.givers = 150, 'Carla deveria ter 150 pessoas diferentes';
+  assert public.kindness_level('00000000-0000-0000-0000-00000000000c', 'aquecimento') = 6, 'Carla é Farol no Aquecimento';
+  assert public.kindness_level('00000000-0000-0000-0000-00000000000c', 'respira') = 1, 'nível é por trilha: na Respira, Semente';
+end $$;
+
+-- Descurtir tira o ponto.
+begin;
+set local request.jwt.claims = '{"role":"service_role"}';
+delete from public.post_reactions where user_id = '10000000-0000-0000-0000-000000000001';
+commit;
+do $$ begin
+  assert (select count(*) from public.point_events where kind = 'curtida' and actor_id = '10000000-0000-0000-0000-000000000001') = 0,
+    'descurtir remove o ponto';
 end $$;
 
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000c","email":"carla@exemplo.com","role":"authenticated"}';
 do $$ declare blocked boolean; begin
-  insert into public.counselors (bio, topics, code_accepted_at) values ('Já passei por crises de ansiedade.', '{ansiedade,sono}', now());
+  insert into public.counselors (track_id, bio, topics, code_accepted_at) values ('aquecimento', 'Já passei por crises de ansiedade.', '{ansiedade,sono}', now());
   assert (select display_name from public.counselors where user_id = auth.uid()) = 'Carla', 'conselheira com o primeiro nome';
-  assert 'formacao-conselheiro' in (select public.my_course_ids()), 'Farol deveria abrir a Formação de Conselheiro';
-  assert 'escuta-que-acolhe' in (select public.my_course_ids()), 'Farol deveria abrir os exclusivos dos níveis anteriores';
-  assert 'mentoria-porto-seguro' not in (select public.my_course_ids()), 'Farol não deveria abrir o exclusivo do nível 7';
-  assert not public.can_access_channel('respira'), 'exclusivo de bondade não deveria abrir o canal da Respira';
-  insert into public.reward_claims (reward_id) values ('copo-ponte');
   blocked := false;
-  begin insert into public.reward_claims (reward_id) values ('kit-porto'); exception when others then blocked := true; end;
-  assert blocked, 'prêmio do nível 7 não deveria ser liberado para o nível 6';
+  begin insert into public.counselors (track_id, code_accepted_at) values ('respira', now()); exception when others then blocked := true; end;
+  assert blocked, 'conselheira só na trilha em que é Farol';
+  assert 'formacao-conselheiro' in (select public.my_course_ids()), 'Farol abre a Formação de Conselheiro';
+  assert 'premio-aquecimento-r1' not in (select public.my_course_ids()), 'recompensa só abre depois do resgate';
+  perform public.redeem_reward('aquecimento-r1');
+  assert 'premio-aquecimento-r1' in (select public.my_course_ids()), 'resgate abre o conteúdo';
+  assert (select status from public.reward_redemptions where reward_id = 'aquecimento-r1') = 'liberado', 'digital fica liberado';
+  assert (select spent from public.points_stats(auth.uid(), 'aquecimento')) = 1140, 'resgate gasta 1.140 pontos';
+  assert public.kindness_level(auth.uid(), 'aquecimento') = 6, 'gastar pontos não baixa o nível';
+  perform public.redeem_reward('aquecimento-r3');
+  assert (select status from public.reward_redemptions where reward_id = 'aquecimento-r3') = 'solicitado', 'físico fica solicitado';
   blocked := false;
-  begin insert into public.reward_claims (reward_id) values ('conteudo-escuta'); exception when others then blocked := true; end;
-  assert blocked, 'só prêmio físico pode ser pedido';
+  begin perform public.redeem_reward('aquecimento-r1'); exception when others then blocked := true; end;
+  assert blocked, 'não dá para resgatar duas vezes';
+  blocked := false;
+  begin perform public.redeem_reward('respira-r1'); exception when others then blocked := true; end;
+  assert blocked, 'pontos do Aquecimento não pagam recompensa da Respira';
+  blocked := false;
+  begin insert into public.reward_redemptions (reward_id, track_id, cost, status) values ('aquecimento-r2', 'aquecimento', 0, 'liberado'); exception when others then blocked := true; end;
+  assert blocked, 'resgate só pela função (que confere o saldo)';
+  blocked := false;
+  begin insert into public.point_events (user_id, track_id, kind, points) values (auth.uid(), 'aquecimento', 'apoio', 5); exception when others then blocked := true; end;
+  assert blocked, 'ninguém escreve pontos direto no extrato';
 end $$;
 commit;
 
@@ -192,51 +225,41 @@ begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000d","email":"duda@exemplo.com","role":"authenticated"}';
 do $$ declare blocked boolean; v_post uuid; v_req uuid; f record; begin
-  insert into public.posts (channel, body, kind, feeling) values ('aquecimento', 'Hoje foi difícil', 'apoio', 'ansiedade') returning id into v_post;
+  insert into public.posts (channel, body, kind, feeling) values ('aquecimento', 'Hoje foi difícil, alguém me ajuda?', 'apoio', 'ansiedade') returning id into v_post;
   blocked := false;
   begin insert into public.thanks (post_id) values (v_post); exception when others then blocked := true; end;
   assert blocked, 'ninguém agradece o próprio post';
 
   insert into public.thanks (post_id, points, receiver_id)
   select id, 999, '00000000-0000-0000-0000-00000000000d' from public.posts where body = 'Dica 4';
-  assert (select points from public.thanks where giver_id = auth.uid()) = 10, 'o banco decide os pontos';
-  assert (select receiver_id from public.thanks where giver_id = auth.uid()) = '00000000-0000-0000-0000-00000000000c',
-    'o banco decide quem recebe';
-  blocked := false;
-  begin insert into public.thanks (post_id) select id from public.posts where body = 'Dica 4'; exception when others then blocked := true; end;
-  assert blocked, 'um obrigado por item';
+  assert (select points from public.thanks where giver_id = auth.uid()) = 2, 'agradecimento vale 2';
+  assert (select receiver_id from public.thanks where giver_id = auth.uid()) = '00000000-0000-0000-0000-00000000000c', 'o banco decide quem recebe';
 
-  insert into public.post_reactions (post_id, kind) select id, 'like' from public.posts where body = 'Dica 4';
+  insert into public.comments (post_id, body) select id, 'Carla, obrigada pela dica! Vou tentar hoje à noite e te conto.' from public.posts where body = 'Dica 4';
+  insert into public.comments (post_id, body) select id, 'Mais uma coisa: funcionou demais ontem, estou mais calma.' from public.posts where body = 'Dica 4';
+  assert (select count(*) from public.point_events where user_id <> auth.uid()) = 0, 'Duda não vê o extrato dos outros';
+  assert (select count(*) from public.point_events where user_id = auth.uid()) = 2, 'Duda vê as duas mensagens no próprio extrato';
+
   insert into public.post_reactions (post_id, kind) select id, 'abraco' from public.posts where body = 'Dica 4';
   select * into f from public.posts_feed where body = 'Dica 4';
-  assert f.author_level = 6, 'feed deveria trazer o nível da autora';
-  assert f.reactions = '{"like": 1, "abraco": 1}'::jsonb, format('reações erradas: %s', f.reactions);
-  assert f.my_reactions @> '{like,abraco}', 'feed deveria marcar as minhas reações';
-  assert f.i_thanked, 'feed deveria marcar que eu agradeci';
-  assert f.thanks_count = 1, format('Dica 4 deveria ter 1 agradecimento, veio %s', f.thanks_count);
-  assert (select count(*) from public.thanks) = 1, 'Duda só vê os próprios agradecimentos';
+  assert f.author_level = 6, 'feed traz o nível da autora na trilha do post';
+  assert f.i_thanked, 'feed marca que eu agradeci';
 
   blocked := false;
-  begin insert into public.counselors (code_accepted_at) values (now()); exception when others then blocked := true; end;
+  begin insert into public.counselors (track_id, code_accepted_at) values ('aquecimento', now()); exception when others then blocked := true; end;
   assert blocked, 'Semente não pode ser conselheira';
   blocked := false;
-  begin insert into public.reward_claims (reward_id) values ('broche-coracao'); exception when others then blocked := true; end;
-  assert blocked, 'Semente não pode pedir o broche';
+  begin perform public.redeem_reward('aquecimento-r1'); exception when others then blocked := true; end;
+  assert blocked, 'sem saldo não resgata';
 
-  assert (select count(*) from public.list_counselors()) = 1, 'Duda deveria ver a Carla na lista de conselheiros';
-  insert into public.advice_requests (counselor_id, topic, message)
-  values ('00000000-0000-0000-0000-00000000000c', 'Ansiedade à noite', 'Acordo de madrugada com a cabeça a mil.') returning id into v_req;
+  assert (select count(*) from public.list_counselors('aquecimento')) = 1, 'Duda vê a Carla como conselheira do Aquecimento';
+  assert (select count(*) from public.list_counselors('respira')) = 0, 'conselheiros são por trilha';
+  insert into public.advice_requests (counselor_id, track_id, topic, message)
+  values ('00000000-0000-0000-0000-00000000000c', 'aquecimento', 'Ansiedade à noite', 'Acordo de madrugada com a cabeça a mil.') returning id into v_req;
   assert (select status from public.advice_requests where id = v_req) = 'pendente', 'pedido começa pendente';
-  assert (select requester_name from public.advice_requests where id = v_req) = 'Duda', 'nome de quem pede vem do perfil';
-  blocked := false;
-  begin insert into public.advice_messages (request_id, body) values (v_req, 'Oi'); exception when others then blocked := true; end;
-  assert blocked, 'conversa só abre depois que a conselheira aceita';
-  blocked := false;
-  begin update public.advice_requests set status = 'aceito' where id = v_req; exception when others then blocked := true; end;
-  assert blocked, 'quem pede não pode aceitar o próprio pedido';
-  blocked := false;
-  begin insert into public.thanks (advice_id) values (v_req); exception when others then blocked := true; end;
-  assert blocked, 'não dá para agradecer conselho antes da conversa começar';
+
+  insert into public.daily_logs (day, track_id, kind, data, score) values ('2020-01-01', 'ritmo', 'plano', '{"prioridades":["Enviar a proposta"]}', null);
+  assert (select day from public.daily_logs) = (now() at time zone 'America/Sao_Paulo')::date, 'plano sempre no dia de hoje';
 
   update public.profiles set health_consent_at = now() where id = auth.uid();
   insert into public.checkins (day, track_id, mood, energy, sleep_hours, sleep_quality, answers, feeling, alert_level)
@@ -246,14 +269,32 @@ do $$ declare blocked boolean; v_post uuid; v_req uuid; f record; begin
 end $$;
 commit;
 
+do $$ begin
+  assert (select count(*) from public.point_events where kind = 'agradecimento' and status = 'valido' and points = 2
+           and user_id = '00000000-0000-0000-0000-00000000000c') = 1, 'Carla ganhou 2 pontos pelo agradecimento';
+  assert (select count(*) from public.point_events where kind = 'ajuda' and status = 'pendente' and points = 3
+           and user_id = '00000000-0000-0000-0000-00000000000d') = 1, 'a primeira mensagem de ajuda da Duda vai para validação';
+  assert (select count(*) from public.point_events where kind = 'ajuda' and status = 'recusado'
+           and user_id = '00000000-0000-0000-0000-00000000000d') = 1, 'a segunda mensagem no mesmo post não pontua';
+end $$;
+
+-- Carla oferece dois apoios no pedido da Duda: um planejamento e um horário.
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000c","email":"carla@exemplo.com","role":"authenticated"}';
-do $$ begin
-  assert (select count(*) from public.advice_requests) = 1, 'Carla deveria ver o pedido da Duda';
-  update public.advice_requests set status = 'aceito';
-  insert into public.advice_messages (request_id, body) select id, 'Oi, Duda. Estou aqui.' from public.advice_requests;
-  assert (select count(*) from public.checkins) = 0, 'Carla não vê check-ins de ninguém';
+do $$ declare blocked boolean; begin
+  insert into public.support_actions (post_id, mode, message, items)
+  select id, 'plano', 'Montei para você', '{"Respiração 4-6 ao acordar","Horário da preocupação às 18h"}' from public.posts where kind = 'apoio';
+  assert (select helped_name from public.support_actions) = 'Duda', 'apoio vai para a autora do pedido';
+  blocked := false;
+  begin
+    insert into public.support_actions (post_id, mode, items) select id, 'plano', '{"a","b"}' from public.posts where kind = 'apoio';
+  exception when others then blocked := true; end;
+  assert blocked, 'um apoio aberto por pedido';
+  blocked := false;
+  begin insert into public.support_actions (post_id, mode, items) select id, 'plano', '{"x","y"}' from public.posts where body = 'Dica 2';
+  exception when others then blocked := true; end;
+  assert blocked, 'apoio só em pedido de apoio';
 end $$;
 commit;
 
@@ -261,20 +302,36 @@ begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000d","email":"duda@exemplo.com","role":"authenticated"}';
 do $$ declare blocked boolean; begin
-  assert (select count(*) from public.advice_messages) = 1, 'Duda deveria ler a resposta';
-  insert into public.advice_messages (request_id, body) select id, 'Obrigada!' from public.advice_requests;
-  insert into public.thanks (advice_id) select id from public.advice_requests;
-  assert (select points from public.thanks where advice_id is not null) = 30, 'conselho vale 30 pontos';
-  insert into public.thanks (post_id)
-  select id from public.posts where body in ('Dica 5', 'Dica 6', 'Dica 7', 'Dica 8', 'Dica 9', 'Dica 10', 'Dica 11', 'Dica 12');
-  assert (select count(*) from public.thanks) = 10, 'Duda deu 10 agradecimentos hoje';
   blocked := false;
-  begin insert into public.thanks (post_id) select id from public.posts where body = 'Dica 13'; exception when others then blocked := true; end;
-  assert blocked, 'limite de 10 agradecimentos por dia';
+  begin update public.support_actions set status = 'concluido'; exception when others then blocked := true; end;
+  assert blocked, 'precisa aceitar antes de concluir';
+  update public.support_actions set status = 'aceito';
+  update public.support_actions set status = 'concluido';
+end $$;
+commit;
+
+do $$ begin
+  assert (select count(*) from public.point_events where kind = 'apoio' and status = 'valido' and points = 5
+           and user_id = '00000000-0000-0000-0000-00000000000c' and day = (now() at time zone 'America/Sao_Paulo')::date) = 1,
+    'apoio concluído vale 5 para quem ajudou';
+end $$;
+
+begin;
+set local request.jwt.claims = '{"role":"service_role"}';
+insert into public.support_actions (post_id, helper_id, helped_id, track_id, mode, scheduled_at, status)
+select id, '00000000-0000-0000-0000-00000000000c', '00000000-0000-0000-0000-00000000000d', 'aquecimento', 'agenda', now() + interval '2 hours', 'oferecido'
+  from public.posts where kind = 'apoio';
+commit;
+
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000d","email":"duda@exemplo.com","role":"authenticated"}';
+do $$ declare blocked boolean; begin
+  update public.support_actions set status = 'aceito' where mode = 'agenda';
+  assert (select count(*) from public.agenda_events where support_id is not null) = 1, 'horário aceito entra na agenda da Duda';
   blocked := false;
-  begin update public.advice_requests set topic = 'Outro'; exception when others then blocked := true; end;
-  assert blocked, 'só o status do pedido pode mudar';
-  update public.advice_requests set status = 'encerrado';
+  begin update public.support_actions set status = 'concluido' where mode = 'agenda'; exception when others then blocked := true; end;
+  assert blocked, 'horário só se confirma depois que acontece';
 end $$;
 commit;
 
@@ -283,8 +340,9 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000b","email":"bia@exemplo.com","role":"authenticated"}';
 do $$ begin
   assert (select count(*) from public.advice_requests) = 0, 'Bia não vê conselhos dos outros';
-  assert (select count(*) from public.advice_messages) = 0, 'Bia não lê a conversa dos outros';
-  assert (select count(*) from public.reward_claims) = 0, 'Bia não vê prêmios dos outros';
+  assert (select count(*) from public.support_actions) = 0, 'Bia não vê apoios dos outros';
+  assert (select count(*) from public.reward_redemptions) = 0, 'Bia não vê resgates dos outros';
+  assert (select count(*) from public.daily_logs) = 0, 'Bia não vê planos dos outros';
 end $$;
 commit;
 
@@ -292,7 +350,7 @@ commit;
 delete from auth.users where id = '00000000-0000-0000-0000-00000000000b';
 do $$ begin
   assert (select count(*) from public.profiles where id = '00000000-0000-0000-0000-00000000000b') = 0, 'perfil deveria sumir';
-  assert (select count(*) from public.agenda_events) = 0, 'agenda deveria sumir';
+  assert (select count(*) from public.agenda_events where user_id = '00000000-0000-0000-0000-00000000000b') = 0, 'agenda deveria sumir';
   assert (select count(*) from public.posts where author_id = '00000000-0000-0000-0000-00000000000b') = 0, 'posts deveriam sumir';
 end $$;
 

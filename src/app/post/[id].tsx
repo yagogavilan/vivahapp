@@ -3,6 +3,8 @@ import { View } from 'react-native';
 
 import { EmergencyCard } from '@/components/care';
 import { CommentItem, Composer, PostCard } from '@/components/community';
+import { SupportSection } from '@/components/support';
+import { programFor } from '@/domain/programs';
 import { Empty, Loading, Screen, Txt } from '@/components/ui';
 import { useComments, useCommunityMutations, usePost } from '@/data/hooks';
 import { colors, space } from '@/theme';
@@ -20,6 +22,7 @@ export default function PostScreen() {
   return (
     <Screen padTop={false} refreshing={comments.isRefetching} onRefresh={() => { post.refetch(); comments.refetch(); }}>
       <PostCard post={p} link={false} />
+      <SupportSection post={p} />
       {p.kind === 'apoio' ? <EmergencyCard compact /> : null}
       <View style={{ gap: space.md }}>
         <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>
@@ -28,7 +31,7 @@ export default function PostScreen() {
         {(comments.data ?? []).map((c) => <CommentItem key={c.id} comment={c} postAuthorId={p.authorId} />)}
       </View>
       <Composer
-        label="Responder com acolhimento"
+        label={`${programFor(p.channel).community.ajuda} · +3 pontos se validada`}
         placeholder="Conte o que funcionou para você, ou só diga que está junto…"
         cta="Responder"
         busy={createComment.isPending}

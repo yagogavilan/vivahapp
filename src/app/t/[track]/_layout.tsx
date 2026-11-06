@@ -62,7 +62,7 @@ export default function SpaceLayout() {
         <Tabs.Screen name="index" options={tab('Hoje', 'sun')} />
         <Tabs.Screen name="cursos" options={tab(space.id === AQUECIMENTO ? 'Conteúdo' : 'Cursos', 'play-circle')} />
         <Tabs.Screen name="comunidade" options={tab('Comunidade', 'users')} />
-        <Tabs.Screen name="agenda" options={tab('Agenda', 'calendar')} />
+        <Tabs.Screen name="recompensas" options={tab('Prêmios', 'gift')} />
         <Tabs.Screen name="perfil" options={tab('Perfil', 'user')} />
       </Tabs>
     </SpaceProvider>

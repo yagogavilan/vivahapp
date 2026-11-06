@@ -1,9 +1,10 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Button, Card, Chip, Field, Icon, Loading, Row, Screen, Txt } from '@/components/ui';
-import { useKindness, useMyCounselorProfile, useSaveCounselorProfile } from '@/data/hooks';
+import { useMyCounselorProfile, usePointsSummary, useSaveCounselorProfile } from '@/data/hooks';
+import { AQUECIMENTO } from '@/domain/spaces';
 import type { CounselorProfile } from '@/data/types';
 import { COUNSELOR_LEVEL, levelInfo } from '@/domain/kindness';
 import { success } from '@/lib/haptics';
@@ -18,8 +19,9 @@ const CODE = [
 
 /** Espaço do conselheiro: só abre no nível Farol, com o código de conduta aceito. */
 export default function MeuEspaco() {
-  const kindness = useKindness();
-  const profile = useMyCounselorProfile();
+  const { track = AQUECIMENTO } = useLocalSearchParams<{ track?: string }>();
+  const kindness = usePointsSummary(track);
+  const profile = useMyCounselorProfile(track);
   if (kindness.isPending || profile.isPending) return <Loading />;
   const level = kindness.data?.level ?? 1;
 
@@ -28,15 +30,15 @@ export default function MeuEspaco() {
       <Screen padTop={false}>
         <Txt variant="hero">O espaço de conselheiro abre no nível {levelInfo(COUNSELOR_LEVEL).name}</Txt>
         <Txt>Continue acolhendo pessoas na comunidade. Cada obrigado que você recebe te aproxima.</Txt>
-        <Button label="Ver os níveis" icon="award" onPress={() => router.replace('/bondade')} />
+        <Button label="Ver os níveis" icon="award" onPress={() => router.replace({ pathname: '/t/[track]/recompensas', params: { track } })} />
       </Screen>
     );
   }
-  return <Form initial={profile.data ?? null} />;
+  return <Form trackId={track} initial={profile.data ?? null} />;
 }
 
-function Form({ initial }: { initial: CounselorProfile | null }) {
-  const save = useSaveCounselorProfile();
+function Form({ trackId, initial }: { trackId: string; initial: CounselorProfile | null }) {
+  const save = useSaveCounselorProfile(trackId);
   const [bio, setBio] = useState(initial?.bio ?? '');
   const [topics, setTopics] = useState((initial?.topics ?? []).join(', '));
   const [open, setOpen] = useState(initial?.isOpen ?? true);

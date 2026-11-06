@@ -32,6 +32,8 @@ export interface Course {
   isFree: boolean;
   /** Conteúdo exclusivo liberado pelo nível de bondade (não é vendido). */
   minKindnessLevel: number | null;
+  /** Só abre resgatando uma recompensa com pontos (não é vendido). */
+  rewardOnly: boolean;
 }
 
 export interface Module {
@@ -131,17 +133,69 @@ export interface Comment {
 
 export type ThankTarget = { type: 'post' | 'comment' | 'advice'; id: string };
 
-export interface KindnessSummary {
+export type PointKind = 'curtida' | 'agradecimento' | 'ajuda' | 'conselho' | 'apoio';
+export type PointStatus = 'pendente' | 'valido' | 'recusado';
+
+/** Uma linha do extrato de pontos. */
+export interface PointEvent {
+  id: string;
+  trackId: string;
+  kind: PointKind;
   points: number;
-  givers: number;
-  level: number;
-  /** Agradecimentos que eu já dei hoje (limite diário). */
-  givenToday: number;
+  status: PointStatus;
+  reason: string | null;
+  actorName: string | null;
+  createdAt: string;
 }
 
-export interface RewardClaim {
+export interface PointsSummary {
+  /** Pontos validados ganhos na trilha (definem o nível). */
+  earned: number;
+  /** Pessoas diferentes que geraram pontos. */
+  givers: number;
+  spent: number;
+  /** Saldo para resgatar recompensas. */
+  balance: number;
+  level: number;
+}
+
+export interface Redemption {
+  id: string;
   rewardId: string;
-  status: 'solicitado' | 'enviado' | 'entregue';
+  trackId: string;
+  cost: number;
+  status: 'liberado' | 'solicitado' | 'enviado' | 'entregue' | 'cancelado';
+  createdAt: string;
+}
+
+export type LogValues = Record<string, string | number | boolean | string[] | number[] | undefined>;
+
+/** Plano (manhã) ou fechamento (noite) do dia numa trilha. */
+export interface DailyLog {
+  day: string;
+  trackId: string;
+  kind: 'plano' | 'fechamento';
+  data: LogValues;
+  score: number | null;
+  valid: boolean;
+}
+
+export type SupportStatus = 'oferecido' | 'aceito' | 'recusado' | 'concluido' | 'cancelado';
+
+/** Apoio a outra pessoa: um horário marcado ou algo montado para ela. */
+export interface SupportAction {
+  id: string;
+  trackId: string;
+  postId: string;
+  helperId: string;
+  helperName: string;
+  helpedId: string;
+  helpedName: string;
+  mode: 'agenda' | 'plano';
+  message: string;
+  items: string[];
+  scheduledAt: string | null;
+  status: SupportStatus;
   createdAt: string;
 }
 
@@ -163,6 +217,7 @@ export type AdviceStatus = 'pendente' | 'aceito' | 'recusado' | 'encerrado';
 
 export interface AdviceRequest {
   id: string;
+  trackId: string;
   requesterId: string;
   requesterName: string;
   counselorId: string;

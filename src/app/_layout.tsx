@@ -92,7 +92,10 @@ function RootNavigator() {
         <Stack.Screen name="certificado/[id]" options={detailHeader} />
         <Stack.Screen name="socorro" options={{ ...detailHeader, presentation: 'modal' }} />
         <Stack.Screen name="publicar" options={{ ...detailHeader, presentation: 'modal' }} />
-        <Stack.Screen name="bondade" options={detailHeader} />
+        <Stack.Screen name="agenda" options={detailHeader} />
+        <Stack.Screen name="plano" options={detailHeader} />
+        <Stack.Screen name="fechamento" options={detailHeader} />
+        <Stack.Screen name="apoio" options={{ ...detailHeader, presentation: 'modal' }} />
         <Stack.Screen name="conselheiros" options={detailHeader} />
         <Stack.Screen name="conselheiro" options={detailHeader} />
         <Stack.Screen name="conselho/novo" options={{ ...detailHeader, presentation: 'modal' }} />

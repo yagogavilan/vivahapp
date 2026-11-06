@@ -7,6 +7,7 @@ import { useCommunityMutations, useReact } from '../data/hooks';
 import type { Comment, Post, PostKind, ReactionKind } from '../data/types';
 import { formatShortDate, formatTime } from '../domain/dates';
 import { levelInfo, TEAM_LEVEL } from '../domain/kindness';
+import { programFor } from '../domain/programs';
 import { confirm, notify } from '../lib/dialogs';
 import { success, tap } from '../lib/haptics';
 import { colors, radius, space } from '../theme';
@@ -68,7 +69,7 @@ export function PostCard({ post, link = true }: { post: Post; link?: boolean }) 
   const liked = post.myReactions.includes('like');
   const open = () => router.push({ pathname: '/post/[id]', params: { id: post.id } });
   const emojiCounts = (Object.keys(EMOJI) as (keyof typeof EMOJI)[]).filter((k) => (post.reactions[k] ?? 0) > 0);
-  const kind = KIND_INFO[post.kind];
+  const kind = post.kind === 'dica' ? { ...KIND_INFO.dica, label: programFor(post.channel).community.dicaPost } : KIND_INFO[post.kind];
 
   const toggle = (k: ReactionKind) => {
     tap();

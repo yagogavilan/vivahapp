@@ -37,7 +37,7 @@ export function spaceFor(id: string, tracks: Track[]): Space | undefined {
 
 /** Cursos que aparecem na aba Cursos de uma trilha (sem os exclusivos de bondade). */
 export function trackCourses(trackId: string, courses: Course[]): Course[] {
-  return courses.filter((c) => c.trackId === trackId && c.minKindnessLevel == null).sort((a, b) => a.sort - b.sort);
+  return courses.filter((c) => c.trackId === trackId && c.minKindnessLevel == null && !c.rewardOnly).sort((a, b) => a.sort - b.sort);
 }
 
 /** Pode entrar no espaço? Aquecimento sempre; trilha só se comprada. */

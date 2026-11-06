@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { useSession } from '../auth/session';
@@ -13,12 +13,14 @@ import type {
   Checkin,
   CounselorProfile,
   Course,
+  DailyLog,
   Favorite,
   Feeling,
   LifeArea,
   Post,
   PostKind,
   ReactionKind,
+  SupportStatus,
   ThankTarget,
   Track,
 } from './types';
@@ -113,6 +115,7 @@ export function useCommunityMutations() {
     createPost: useMutation({
       mutationFn: async (v: { channel: string; body: string; kind?: PostKind; feeling?: Feeling | null }) => {
         await api.createPost(v.channel, v.body, v.kind, v.feeling);
+        if (v.kind === 'dica') await api.validateContributions();
         await api.logActivity('post', v.channel).catch(() => undefined);
       },
       onSuccess: refresh,
@@ -121,6 +124,7 @@ export function useCommunityMutations() {
     createComment: useMutation({
       mutationFn: async (v: { postId: string; body: string }) => {
         await api.createComment(v.postId, v.body);
+        await api.validateContributions();
         await api.logActivity('post', v.postId).catch(() => undefined);
       },
       onSuccess: refresh,
@@ -161,36 +165,82 @@ export function useReact(channel: string) {
   });
 }
 
-export function useKindness() {
-  const key = useKey('kindness');
-  return useQuery({ queryKey: key, queryFn: () => api.getMyKindness() });
+/** Saldo, pontos ganhos e nível do aluno numa trilha. */
+export function usePointsSummary(trackId: string) {
+  const key = useKey('points', trackId);
+  return useQuery({ queryKey: key, queryFn: () => api.getPointsSummary(trackId) });
 }
 
-export function useRewardClaims() {
-  const key = useKey('reward-claims');
-  return useQuery({ queryKey: key, queryFn: () => api.getRewardClaims() });
+/** Resumo de pontos de várias trilhas (coleção de selos no Perfil). */
+export function useAllPointsSummaries(trackIds: string[]) {
+  const base = useKey('points');
+  return useQueries({
+    queries: trackIds.map((id) => ({ queryKey: [...base, id], queryFn: () => api.getPointsSummary(id) })),
+  });
 }
 
-export function useClaimReward() {
-  const qc = useQueryClient();
-  const key = useKey('reward-claims');
-  return useMutation({ mutationFn: (rewardId: string) => api.claimReward(rewardId), onSuccess: () => qc.invalidateQueries({ queryKey: key }) });
+export function usePointEvents(trackId: string) {
+  const key = useKey('points-events', trackId);
+  return useQuery({ queryKey: key, queryFn: () => api.getPointEvents(trackId) });
 }
 
-export function useCounselors() {
-  const key = useKey('counselors');
-  return useQuery({ queryKey: key, queryFn: () => api.listCounselors() });
+export function useRedemptions() {
+  const key = useKey('redemptions');
+  return useQuery({ queryKey: key, queryFn: () => api.getRedemptions() });
 }
 
-export function useMyCounselorProfile() {
-  const key = useKey('my-counselor');
-  return useQuery({ queryKey: key, queryFn: () => api.getMyCounselorProfile() });
-}
-
-export function useSaveCounselorProfile() {
+export function useRedeem() {
   const qc = useQueryClient();
   const base = useKey();
-  return useMutation({ mutationFn: (p: CounselorProfile) => api.saveCounselorProfile(p), onSuccess: () => qc.invalidateQueries({ queryKey: base }) });
+  return useMutation({ mutationFn: (rewardId: string) => api.redeemReward(rewardId), onSuccess: () => qc.invalidateQueries({ queryKey: base }) });
+}
+
+export function useDailyLogs(trackId: string, days = 30) {
+  const key = useKey('daily-logs', trackId, days);
+  return useQuery({ queryKey: key, queryFn: () => api.getDailyLogs(trackId, days) });
+}
+
+export function useSaveDailyLog() {
+  const qc = useQueryClient();
+  const base = useKey('daily-logs');
+  return useMutation({
+    mutationFn: (log: Omit<DailyLog, 'day'>) => api.saveDailyLog(log),
+    onSuccess: () => qc.invalidateQueries({ queryKey: base }),
+  });
+}
+
+export function useSupportActions() {
+  const key = useKey('support');
+  return useQuery({ queryKey: key, queryFn: () => api.getSupportActions(), refetchInterval: 30_000 });
+}
+
+export function useSupportMutations() {
+  const qc = useQueryClient();
+  const base = useKey();
+  const refresh = () => qc.invalidateQueries({ queryKey: base });
+  return {
+    offer: useMutation({
+      mutationFn: (v: { postId: string; mode: 'agenda' | 'plano'; message: string; items: string[]; scheduledAt: string | null }) => api.offerSupport(v),
+      onSuccess: refresh,
+    }),
+    setStatus: useMutation({ mutationFn: (v: { id: string; status: SupportStatus }) => api.setSupportStatus(v.id, v.status), onSuccess: refresh }),
+  };
+}
+
+export function useCounselors(trackId: string) {
+  const key = useKey('counselors', trackId);
+  return useQuery({ queryKey: key, queryFn: () => api.listCounselors(trackId) });
+}
+
+export function useMyCounselorProfile(trackId: string) {
+  const key = useKey('my-counselor', trackId);
+  return useQuery({ queryKey: key, queryFn: () => api.getMyCounselorProfile(trackId) });
+}
+
+export function useSaveCounselorProfile(trackId: string) {
+  const qc = useQueryClient();
+  const base = useKey();
+  return useMutation({ mutationFn: (p: CounselorProfile) => api.saveCounselorProfile(trackId, p), onSuccess: () => qc.invalidateQueries({ queryKey: base }) });
 }
 
 export function useAdviceRequests() {
@@ -209,7 +259,8 @@ export function useAdviceMutations() {
   const refresh = () => qc.invalidateQueries({ queryKey: base });
   return {
     request: useMutation({
-      mutationFn: (v: { counselorId: string; topic: string; message: string }) => api.createAdviceRequest(v.counselorId, v.topic, v.message),
+      mutationFn: (v: { counselorId: string; trackId: string; topic: string; message: string }) =>
+        api.createAdviceRequest(v.counselorId, v.trackId, v.topic, v.message),
       onSuccess: refresh,
     }),
     setStatus: useMutation({ mutationFn: (v: { id: string; status: AdviceStatus }) => api.setAdviceStatus(v.id, v.status), onSuccess: refresh }),

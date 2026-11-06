@@ -5,7 +5,7 @@ export interface DemoPerson {
   id: string;
   name: string;
   level: number;
-  counselor?: { bio: string; topics: string[] };
+  counselor?: { bio: string; topics: string[]; tracks: string[] };
 }
 
 export const DEMO_PEOPLE: DemoPerson[] = [
@@ -14,13 +14,13 @@ export const DEMO_PEOPLE: DemoPerson[] = [
     id: 'demo-marina',
     name: 'Marina',
     level: 6,
-    counselor: { bio: 'Tive crises de ansiedade por anos e hoje vivo bem. Gosto de ouvir quem está começando.', topics: ['Ansiedade', 'Sono', 'Recomeços'] },
+    counselor: { bio: 'Tive crises de ansiedade por anos e hoje vivo bem. Gosto de ouvir quem está começando.', topics: ['Ansiedade', 'Sono', 'Recomeços'], tracks: ['respira', 'aquecimento'] },
   },
   {
     id: 'demo-paula',
     name: 'Paula',
     level: 7,
-    counselor: { bio: 'Mãe, gestora e ex-workaholic. Posso ajudar com rotina, culpa e limites no trabalho.', topics: ['Rotina', 'Trabalho', 'Maternidade'] },
+    counselor: { bio: 'Mãe, gestora e ex-workaholic. Posso ajudar com rotina, culpa e limites no trabalho.', topics: ['Rotina', 'Trabalho', 'Maternidade'], tracks: ['ritmo', 'eleva', 'aquecimento'] },
   },
   { id: 'demo-juliana', name: 'Juliana', level: 4 },
   { id: 'demo-rafa', name: 'Rafael', level: 3 },

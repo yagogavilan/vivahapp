@@ -5,10 +5,14 @@ import type {
   Counselor,
   CounselorProfile,
   Feeling,
-  KindnessSummary,
+  DailyLog,
+  PointEvent,
+  PointsSummary,
+  Redemption,
+  SupportAction,
+  SupportStatus,
   PostKind,
   ReactionKind,
-  RewardClaim,
   ThankTarget,
   Activity,
   ActivityKind,
@@ -82,15 +86,27 @@ export interface Api {
   thank(target: ThankTarget): Promise<void>;
   report(targetType: 'post' | 'comment' | 'advice' | 'user', targetId: string, reason: string): Promise<void>;
 
-  getMyKindness(): Promise<KindnessSummary>;
-  getRewardClaims(): Promise<RewardClaim[]>;
-  claimReward(rewardId: string): Promise<void>;
+  /** Pede ao servidor para validar as mensagens que valem pontos (ajuda e conselho). */
+  validateContributions(): Promise<void>;
 
-  listCounselors(): Promise<Counselor[]>;
-  getMyCounselorProfile(): Promise<CounselorProfile | null>;
-  saveCounselorProfile(profile: CounselorProfile): Promise<void>;
+  getPointsSummary(trackId: string): Promise<PointsSummary>;
+  getPointEvents(trackId: string): Promise<PointEvent[]>;
+  getRedemptions(): Promise<Redemption[]>;
+  redeemReward(rewardId: string): Promise<void>;
+
+  getDailyLogs(trackId: string, days: number): Promise<DailyLog[]>;
+  /** Salva o plano ou o fechamento de hoje (o servidor grava o dia de Brasília). */
+  saveDailyLog(log: Omit<DailyLog, 'day'>): Promise<void>;
+
+  getSupportActions(): Promise<SupportAction[]>;
+  offerSupport(input: { postId: string; mode: 'agenda' | 'plano'; message: string; items: string[]; scheduledAt: string | null }): Promise<void>;
+  setSupportStatus(id: string, status: SupportStatus): Promise<void>;
+
+  listCounselors(trackId: string): Promise<Counselor[]>;
+  getMyCounselorProfile(trackId: string): Promise<CounselorProfile | null>;
+  saveCounselorProfile(trackId: string, profile: CounselorProfile): Promise<void>;
   getAdviceRequests(): Promise<AdviceRequest[]>;
-  createAdviceRequest(counselorId: string, topic: string, message: string): Promise<string>;
+  createAdviceRequest(counselorId: string, trackId: string, topic: string, message: string): Promise<string>;
   setAdviceStatus(id: string, status: AdviceStatus): Promise<void>;
   getAdviceMessages(requestId: string): Promise<AdviceMessage[]>;
   sendAdviceMessage(requestId: string, body: string): Promise<void>;

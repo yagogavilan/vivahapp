@@ -8,7 +8,7 @@ import { success } from '@/lib/haptics';
 import { colors, space } from '@/theme';
 
 export default function NovoConselho() {
-  const { c, name } = useLocalSearchParams<{ c: string; name?: string }>();
+  const { c, name, track = 'aquecimento' } = useLocalSearchParams<{ c: string; name?: string; track?: string }>();
   const { request } = useAdviceMutations();
   const [topic, setTopic] = useState('');
   const [message, setMessage] = useState('');
@@ -38,7 +38,7 @@ export default function NovoConselho() {
         onPress={async () => {
           setError(null);
           try {
-            const id = await request.mutateAsync({ counselorId: c, topic, message });
+            const id = await request.mutateAsync({ counselorId: c, trackId: track, topic, message });
             success();
             router.replace({ pathname: '/conselho/[id]', params: { id } });
           } catch (e) {

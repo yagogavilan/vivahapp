@@ -22,7 +22,7 @@ export default function Agenda() {
   const days = agendaDays(lives.data ?? [], agenda.data ?? [], new Date(), 14);
 
   return (
-    <Screen refreshing={agenda.isRefetching} onRefresh={() => { agenda.refetch(); lives.refetch(); }}>
+    <Screen padTop={false} refreshing={agenda.isRefetching} onRefresh={() => { agenda.refetch(); lives.refetch(); }}>
       <View style={{ gap: space.xs }}>
         <Txt variant="eyebrow">Agenda</Txt>
         <Txt variant="hero">Os próximos 14 dias</Txt>
