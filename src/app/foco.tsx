@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { Button, Card, Chip, Icon, Row, Screen, Txt } from '@/components/ui';
 import { ProgressRing } from '@/components/visual';
-import { useLogActivity } from '@/data/hooks';
+import { useLogActivity, useTrackEntryMutations } from '@/data/hooks';
 import { success } from '@/lib/haptics';
 import { cancelById, scheduleFocusEnd } from '@/lib/reminders';
 import { colors, fonts, space } from '@/theme';
@@ -22,6 +22,7 @@ const mmss = (ms: number) => {
  */
 export default function Foco() {
   const log = useLogActivity();
+  const panel = useTrackEntryMutations();
   const [minutes, setMinutes] = useState(25);
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [pausedLeft, setPausedLeft] = useState<number | null>(null);
@@ -47,6 +48,8 @@ export default function Foco() {
       setFinished(true);
       success();
       log.mutate({ kind: 'foco', ref: new Date(endsAt).toISOString(), minutes });
+      // O bloco concluído entra nos minutos de foco do painel do Ritmo.
+      panel.add.mutate({ trackId: 'ritmo', metric: 'foco', delta: minutes });
     }, 500);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

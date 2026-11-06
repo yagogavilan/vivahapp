@@ -8,6 +8,7 @@ import { buildEscudo, buildLives } from '../domain/schedule';
 import type { Api, SessionUser } from './api';
 import * as seedCatalog from './catalog';
 import { diagnosticQuestions } from './catalog';
+import { PERSISTENT_METRICS, type Entry } from '../domain/panels';
 import { deriveProducts } from '../domain/admin';
 import { sequenceInfo, trackSequence } from '../domain/sequence';
 import { judgeContribution } from '../../supabase/functions/_shared/contribution';
@@ -70,6 +71,7 @@ function initialState() {
     activity: [1, 2, 3, 4].map((d) => ({ day: addDays(t, -d), kind: 'escudo' as const, ref: `escudo-${addDays(t, -d)}`, minutes: 5 })) as Activity[],
     notes: {} as Record<string, string>,
     favorites: [] as Favorite[],
+    trackEntries: [] as Entry[],
   };
 }
 
@@ -706,5 +708,42 @@ export const demoApi: Api = {
     requireAdmin();
     await wait();
     cat.checkouts[productId] = checkoutUrl;
+  },
+  async getTrackEntries(stores, sinceDay) {
+    await wait(80);
+    return state.trackEntries
+      .filter((e) => stores.includes(e.trackId) && (e.day >= sinceDay || PERSISTENT_METRICS.includes(e.metric)))
+      .map((e) => ({ ...e, data: { ...e.data } }));
+  },
+  async saveTrackEntry(e) {
+    await wait(80);
+    const health = ['peso', 'medidas', 'corpo', 'gad7', 'sono', 'refeicao'];
+    if (health.includes(e.metric) && !state.profile?.healthConsentAt) throw new Error('Ative o acompanhamento de saúde em Privacidade para registrar isso.');
+    if (e.id) {
+      const cur = state.trackEntries.find((x) => x.id === e.id);
+      if (cur) Object.assign(cur, { value: e.value, data: e.data as Entry['data'] });
+      return;
+    }
+    const day = e.day && e.day <= today() && e.day >= addDays(today(), -7) ? e.day : today();
+    const key = e.key ?? '';
+    const cur = state.trackEntries.find((x) => x.trackId === e.trackId && x.metric === e.metric && x.day === day && x.key === key);
+    if (cur) Object.assign(cur, { value: e.value, data: e.data as Entry['data'] });
+    else state.trackEntries.push({ id: uid(), trackId: e.trackId, metric: e.metric, day, key, value: e.value, data: e.data as Entry['data'], createdAt: new Date().toISOString() });
+  },
+  async deleteTrackEntry(id) {
+    await wait(60);
+    state.trackEntries = state.trackEntries.filter((e) => e.id !== id);
+  },
+  async addTrackCounter(trackId, metric, delta) {
+    await wait(40);
+    const day = today();
+    const cur = state.trackEntries.find((x) => x.trackId === trackId && x.metric === metric && x.day === day && x.key === '');
+    if (cur) {
+      cur.value = Math.max(0, (cur.value ?? 0) + delta);
+      return cur.value;
+    }
+    const value = Math.max(0, delta);
+    state.trackEntries.push({ id: uid(), trackId, metric, day, key: '', value, data: {}, createdAt: new Date().toISOString() });
+    return value;
   },
 };

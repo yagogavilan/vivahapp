@@ -14,6 +14,20 @@ Este é o **MVP de 01/12/2026**:
 - **Check-in de humor e sono:** só com consentimento (dado de saúde, LGPD art. 11).
 - **Privacidade:** o aluno exporta os próprios dados e apaga a conta dentro do app, como as lojas exigem.
 
+### Painel de cada trilha e conteúdo completo (versão 6)
+
+- **Todas as seis trilhas no ar**, cada uma com 4 cursos em sequência (Respira 59 aulas, Ritmo 43, Eleva 36, Prospera 32, Move 55, Nutre 40) e de 2 a 3 low tickets. Os títulos e resumos das aulas são roteiro para os professores gravarem; troque o que quiser na página de admin.
+- **Painel da trilha no Hoje** (e completo em "Painel completo"), com o que é próprio de cada área. Regras e referências em `src/domain/panels.ts`:
+  - **Move:** água com meta de 35 ml por kg, peso com IMC e alerta de mudança rápida (mais de 1% por semana), treinos de academia, funcional, corrida etc. com intensidade, esforço de 0 a 10 (Borg) e volume de carga ("4x10 40kg"), minutos da semana contra a OMS (150 min, vigorosa vale o dobro, força em 2 dias), passos e medidas com risco da cintura e relação cintura-quadril (OMS).
+  - **Nutre:** refeições com o prato do Guia Alimentar, fome antes e saciedade depois, como comeu e o que levou a comer; porções de frutas e hortaliças (meta 5); ultraprocessados; água (a mesma do Move). Sem calorias e sem peso.
+  - **Respira:** GAD-7 semanal com faixas e orientação para procurar ajuda a partir de 10 pontos, diário do sono com eficiência (alvo 85%), preocupações (dependem de você ou não) e minutos de respiração (os exercícios do Socorro entram sozinhos).
+  - **Ritmo:** minutos de foco (o Bloco de foco entra sozinho), interrupções, auditoria do tempo por categoria e revisão semanal (GTD).
+  - **Prospera:** lançamentos na regra 50-30-20, quanto ainda dá para gastar por dia, dívidas na ordem avalanche e bola de neve (com alerta de rotativo e cheque especial) e reserva de emergência.
+  - **Eleva:** diário de conquistas, metas do trimestre, contatos e estudo da semana, feedbacks e autoavaliação de habilidades (PDI).
+- Peso, medidas, sono, refeições e GAD-7 são dados de saúde: só gravam com o consentimento e são apagados se ele for retirado. Água, passos, treinos e gastos não pedem consentimento.
+
+Migração `20261110000000_paineis.sql` (tabela `track_entries`, contador `track_counter_add`, todas as trilhas no ar).
+
 ### Teste de momento de vida, assinatura por trilha e página de admin (versão 5)
 
 - **Teste do primeiro acesso:** 14 perguntas (mente, tempo, corpo, alimentação, finanças, carreira e o objetivo para os próximos 3 meses). Mostra o **momento de vida** (reequilíbrio, organização, estabilidade ou crescimento, em 4 degraus) e a **trilha indicada**, respeitando a ordem da jornada: Respira → Ritmo, Move, Nutre → Prospera → Eleva; quem chega pela carreira com a base em ordem segue Eleva → Ritmo → Prospera. É só indicação: todas as trilhas aparecem e qualquer uma pode ser a primeira. Regras em `src/domain/life-test.ts`; o aluno refaz o teste pela tela inicial ou pelo Perfil.
@@ -78,6 +92,29 @@ A venda acontece no pitch das lives, nos grupos, no WhatsApp, no e-mail e na ver
 
 A regra está em `CAN_SELL_IN_APP` (`src/lib/config.ts`) e no `LockedPanel` (`src/components/locked-panel.tsx`).
 
+## Capacidade: 5 mil alunos ou mais
+
+Teste de carga no Postgres local (2 núcleos, 7 GB, parecido com o Supabase Small ou Medium), com **10 mil alunos** e uso intenso: 40 mil posts, 120 mil comentários, 400 mil reações, 1 milhão de eventos de pontos, 1,5 milhão de registros de painel, 30 dias de check-in e plano. Rode com `npm run db:load`.
+
+| Tela | Tempo no banco |
+|---|---|
+| Catálogo, progresso, check-ins, plano, painel | menos de 1 ms |
+| Meus acessos | 3 a 4 ms |
+| Abrir aula (com a regra da sequência) | 7 ms |
+| Feed de uma trilha (50 posts com reações e nível de bondade) | 4 a 6 ms |
+| Comentários do post mais comentado | 10 a 13 ms |
+
+Com 40 conexões simultâneas abrindo o app (6 consultas cada) e 10% de escrita (curtidas com pontos validados), o banco processou cerca de **280 aberturas de app por segundo**, sem erros. Para 5 mil alunos online ao mesmo tempo, cada um abrindo uma tela a cada 30 segundos, são cerca de 170 por segundo.
+
+O que foi ajustado para chegar a isso (migração `20261109000000_desempenho.sql`): as regras de acesso eram avaliadas linha a linha e o feed de uma trilha levava 43 segundos; agora cada função roda uma vez por consulta. Os totais de pontos ficam prontos numa tabela, há índices para as buscas e para apagar contas, e o app envia o filtro do aluno e lê o id da sessão local.
+
+**Recomendações para o lançamento**
+
+- **Supabase Pro** (US$ 25/mês, 8 GB de banco, 250 GB de tráfego, 100 mil usuários ativos por mês). A base de teste com 10 mil alunos e 3 meses de uso ocupou 930 MB. Comece no computador Small e suba para Medium se o painel de desempenho do Supabase mostrar CPU alta.
+- **E-mail de login:** configure um SMTP próprio (Resend, SES ou SendGrid). O SMTP padrão do Supabase envia só 2 e-mails por hora. Com SMTP próprio, ajuste em Authentication → Rate Limits o limite de envios por hora para o tamanho do lançamento (o padrão é 30).
+- **Vídeos fora do Supabase:** o banco guarda só o link de cada aula, então o número de aulas não pesa. O que pesa é o tráfego: 5 mil alunos assistindo 2 horas por mês em 720p dão cerca de 7 TB por mês, o que no Supabase (US$ 0,09 por GB além dos 250 GB) passaria de US$ 600. Use Bunny Stream (a partir de US$ 0,005 por GB entregue e US$ 0,01 por GB armazenado, sem custo de codificação) ou Panda Video (planos com banda incluída e proteção contra download). PDFs e planilhas podem ficar no Storage do Supabase.
+- Ative o backup com recuperação por horário (PITR) quando o banco passar de 4 GB.
+
 ## Rodar no computador
 
 ```bash
@@ -138,7 +175,7 @@ Cursos, módulos, aulas, low tickets, preços e links de pagamento: pela **pági
 | Material de texto/PDF | `lesson_media` | `body` e `media_url` do arquivo |
 | Escudo Anticrise do dia | `escudo_audios` | `audio_url`, `title`, `summary`, `publish_date` |
 | Link da live | `lives` | `youtube_id` (o código depois de `v=`), datas e `replay_until` |
-| Lançar uma trilha | `tracks` | `status` de `soon` para `live` |
+| Segurar uma trilha como "em breve" | página de admin | Situação: Em breve |
 | Dar acesso manual (cortesia) | `entitlements` | e-mail em minúsculas + curso + produto |
 | Tornar alguém moderador | `profiles` | `role = admin` (só pelo painel) |
 
@@ -184,9 +221,12 @@ tests/                   testes das regras de negócio e do webhook
 ```bash
 npm run typecheck   # TypeScript
 npx expo lint       # ESLint
-npm test            # acesso, datas, agenda, diagnóstico, sequência, conquistas, busca e webhook da Hotmart
+npm test            # acesso, sequência, teste de momento, painéis das trilhas, pontos, agenda e webhook
 npm run db:test     # migração + seed + RLS num Postgres local (PGPASSWORD=... se precisar)
+npm run db:load     # base de carga com 10 mil alunos e tempo de cada consulta
 ```
+
+O TypeScript confere os links entre telas (rotas tipadas) depois que o `npx expo start` gera `.expo/types` uma vez.
 
 ## Próximos passos (fora do MVP)
 

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import type { LogValues } from '../data/types';
@@ -41,25 +42,7 @@ function Control({ field, value, onChange, planValues }: Parameters<typeof Field
         />
       );
     case 'number':
-      return (
-        <Row gap={space.sm}>
-          {field.unit === 'R$' ? <Txt variant="bodyStrong">R$</Txt> : null}
-          <TextInput
-            style={[styles.input, { width: 140 }]}
-            value={value === undefined || value === '' ? '' : String(value)}
-            onChangeText={(t) => {
-              const clean = t.replace(/[^\d.,]/g, '');
-              if (clean === '') return onChange(undefined);
-              const n = Number(clean.replace(',', '.'));
-              onChange(Number.isNaN(n) ? undefined : Math.min(n, field.max ?? n));
-            }}
-            placeholder="0"
-            placeholderTextColor={colors.textSubtle}
-            keyboardType="decimal-pad"
-          />
-          {field.unit && field.unit !== 'R$' ? <Txt variant="small">{field.unit}</Txt> : null}
-        </Row>
-      );
+      return <NumberInput field={field} value={value} onChange={onChange} />;
     case 'yesno':
       return (
         <Row gap={space.sm}>
@@ -139,6 +122,37 @@ function Control({ field, value, onChange, planValues }: Parameters<typeof Field
       );
     }
   }
+}
+
+/**
+ * Número com vírgula: o texto fica guardado enquanto a pessoa digita ("82," vira 82,4
+ * no próximo toque) e o valor numérico vai para o formulário.
+ */
+function NumberInput({ field, value, onChange }: { field: Field; value: LogValues[string]; onChange: (v: LogValues[string]) => void }) {
+  const [text, setText] = useState(value === undefined || value === null || value === '' ? '' : String(value).replace('.', ','));
+  return (
+    <Row gap={space.sm}>
+      {field.unit === 'R$' ? <Txt variant="bodyStrong">R$</Txt> : null}
+      <TextInput
+        style={[styles.input, { width: 140 }]}
+        value={text}
+        onChangeText={(t) => {
+          // Em reais o ponto é separador de milhar (1.500); nas medidas vira vírgula decimal.
+          const digits = t.replace(/[^\d.,]/g, '');
+          const clean = field.unit === 'R$' ? digits.replace(/\./g, '') : digits.replace(/\./g, ',');
+          setText(clean);
+          if (clean === '' || clean === ',') return onChange(undefined);
+          const n = Number(clean.replace(',', '.'));
+          onChange(Number.isNaN(n) ? undefined : Math.min(n, field.max ?? n));
+        }}
+        placeholder="0"
+        placeholderTextColor={colors.textSubtle}
+        keyboardType="decimal-pad"
+        accessibilityLabel={field.label}
+      />
+      {field.unit && field.unit !== 'R$' ? <Txt variant="small">{field.unit}</Txt> : null}
+    </Row>
+  );
 }
 
 function Pick({ label, on, onPress, round }: { label: string; on: boolean; onPress: () => void; round?: boolean }) {

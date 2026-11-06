@@ -46,4 +46,5 @@ for who in "$TIPICO" "$ATIVO"; do
   run "check-ins (30 dias)" "$who" "select * from public.checkins where user_id = 'ME' and day > current_date - 30"
   run "atividade (7 dias)" "$who" "select * from public.activity_log where user_id = 'ME' and day > current_date - 7"
   run "conselheiros da trilha" "$who" "select * from public.list_counselors('respira')"
+  run "painel do Move (120 dias)" "$who" "select * from public.track_entries where user_id = 'ME' and track_id in ('move') and (day >= current_date - 120 or metric in ('corpo','financas','divida','meta')) order by day desc limit 3000"
 done

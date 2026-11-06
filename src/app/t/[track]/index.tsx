@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { LiveCard } from '@/components/aquecimento';
+import { PanelSummary } from '@/components/panel';
 import { FeelingChip } from '@/components/feeling';
 import { SpaceCover, SpaceHeader } from '@/components/space';
 import { Button, ErrorState, Icon, type IconName, LinkText, ProgressBar, Row, Screen, Txt } from '@/components/ui';
@@ -20,8 +21,9 @@ import {
 import type { Lesson } from '@/data/types';
 import { completion, nextLesson } from '@/domain/access';
 import { readCheckin } from '@/domain/checkin-protocol';
-import { addDays, dayKey, formatTime, greeting } from '@/domain/dates';
+import { dayKey, formatTime, greeting } from '@/domain/dates';
 import { buildJourney, type JourneyStep } from '@/domain/journey';
+import { panelFor } from '@/domain/panels';
 import { evolution, programFor } from '@/domain/programs';
 import { agendaDays, nextLive, todaysEscudo } from '@/domain/schedule';
 import { AQUECIMENTO, trackCourses } from '@/domain/spaces';
@@ -41,6 +43,7 @@ const STEP_ICON: Record<JourneyStep['id'], IconName> = {
 export default function HojeDaTrilha() {
   const sp = useSpace();
   const program = programFor(sp.id);
+  const panel = panelFor(sp.id);
   const { profile } = useSession();
   const library = useLibrary();
   const lives = useLives();
@@ -90,12 +93,6 @@ export default function HojeDaTrilha() {
   const reading = checkin.today ? readCheckin(sp.id, checkin.today.answers) : undefined;
   const planCheck = plan ? program.validate(plan.data) : undefined;
   const pain = typeof checkin.today?.answers.pain === 'number' ? (checkin.today.answers.pain as number) : undefined;
-
-  // Move: minutos ativos da semana contra a meta de 150 da OMS.
-  const weekMinutes = sp.id === 'move'
-    ? (logs.data ?? []).filter((l) => l.kind === 'fechamento' && l.day > addDays(today, -7))
-        .reduce((s, l) => s + (Number(l.data.minutos) || 0), 0)
-    : null;
 
   const go = (route: string, params: Record<string, string> = {}) => {
     tap();
@@ -230,12 +227,6 @@ export default function HojeDaTrilha() {
             ? 'Faça o fechamento do dia para começar a medir.'
             : `Média da semana: ${evo.thisWeek}${evo.delta !== null ? ` (${evo.delta >= 0 ? '+' : ''}${evo.delta} vs semana passada)` : ''}`}
         </Txt>
-        {weekMinutes !== null ? (
-          <View style={{ gap: 4 }}>
-            <ProgressBar value={(weekMinutes / 150) * 100} color={colors.coral} />
-            <Txt variant="small">{weekMinutes} de 150 minutos na semana (meta da OMS)</Txt>
-          </View>
-        ) : null}
       </Pressable>
     </FadeIn>
   );
@@ -290,7 +281,7 @@ export default function HojeDaTrilha() {
         <Txt variant="small">{program.purpose}</Txt>
       </View>
       <Columns
-        left={<>{checkinCard}{planCard}{journeyCard}</>}
+        left={<>{checkinCard}{panel ? <FadeIn delay={40}><PanelSummary panel={panel} /></FadeIn> : null}{planCard}{journeyCard}</>}
         right={<>{evolutionCard}{tools}{agendaCard}{continueCard}{live ? <LiveCard live={live} /> : null}</>}
       />
     </Screen>

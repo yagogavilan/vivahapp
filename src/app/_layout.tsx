@@ -101,6 +101,8 @@ function RootNavigator() {
         <Stack.Screen name="conselheiro" options={detailHeader} />
         <Stack.Screen name="conselho/novo" options={{ ...detailHeader, presentation: 'modal' }} />
         <Stack.Screen name="conselho/[id]" options={detailHeader} />
+        <Stack.Screen name="painel/index" options={detailHeader} />
+        <Stack.Screen name="painel/[metric]" options={detailHeader} />
       </Stack.Protected>
       <Stack.Protected guard={signedIn && onboarded && isAdmin}>
         <Stack.Screen name="admin/index" options={{ ...detailHeader, title: 'Administração' }} />

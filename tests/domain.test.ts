@@ -35,7 +35,8 @@ describe('datas em Brasília', () => {
 describe('acesso aos cursos', () => {
   const none = new Set<string>();
   it('trilha em breve fica em breve, mesmo com acesso', () => {
-    expect(courseState(course('semana-organizada'), track('ritmo'), new Set(['semana-organizada']))).toBe('soon');
+    expect(courseState(course('semana-organizada'), { ...track('ritmo'), status: 'soon' }, new Set(['semana-organizada']))).toBe('soon');
+    expect(courseState(course('semana-organizada'), track('ritmo'), new Set(['semana-organizada']))).toBe('open');
   });
   it('curso pago sem compra fica bloqueado; com compra, aberto', () => {
     expect(courseState(course('protocolo-desligando-a-mente'), track('respira'), none)).toBe('locked');

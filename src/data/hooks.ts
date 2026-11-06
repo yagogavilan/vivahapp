@@ -5,8 +5,9 @@ import { useSession } from '../auth/session';
 import { courseState, type CourseState } from '../domain/access';
 import { computeStreak } from '../domain/streak';
 import { api } from './index';
-import type { AdminCourseInput, AdminLessonInput, AdminModuleInput, AdminTrackPatch } from './api';
-import { dayKey } from '../domain/dates';
+import type { AdminCourseInput, AdminLessonInput, AdminModuleInput, AdminTrackPatch, TrackEntryInput } from './api';
+import { panelStores } from '../domain/panels';
+import { addDays, dayKey } from '../domain/dates';
 import type {
   ActivityKind,
   AdviceStatus,
@@ -421,5 +422,30 @@ export function useAdmin() {
     deleteLesson: useMutation(m((id: string) => api.adminDeleteLesson(id))),
     reorder: useMutation(m((v: { kind: 'courses' | 'modules' | 'lessons'; ids: string[] }) => api.adminReorder(v.kind, v.ids))),
     setCheckout: useMutation(m((v: { productId: string; url: string | null }) => api.adminSetCheckout(v.productId, v.url))),
+  };
+}
+
+/** Registros do painel da trilha (inclui a água do Move quando a trilha é o Nutre). */
+export function useTrackEntries(trackId: string) {
+  const stores = panelStores(trackId);
+  const key = useKey('track-entries', trackId);
+  return useQuery({
+    queryKey: key,
+    queryFn: () => api.getTrackEntries(stores, addDays(dayKey(new Date()), -120)),
+    enabled: stores.length > 0,
+    staleTime: 60_000,
+  });
+}
+
+export function useTrackEntryMutations() {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ predicate: (q) => q.queryKey.includes('track-entries') });
+  return {
+    save: useMutation({ mutationFn: (e: TrackEntryInput) => api.saveTrackEntry(e), onSuccess: refresh }),
+    remove: useMutation({ mutationFn: (id: string) => api.deleteTrackEntry(id), onSuccess: refresh }),
+    add: useMutation({
+      mutationFn: (v: { trackId: string; metric: string; delta: number }) => api.addTrackCounter(v.trackId, v.metric, v.delta),
+      onSuccess: refresh,
+    }),
   };
 }

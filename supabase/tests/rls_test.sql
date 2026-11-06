@@ -436,6 +436,54 @@ do $$ begin
 end $$;
 commit;
 
+-- ——— Painel da trilha: hábitos livres, dados de saúde só com consentimento ———
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000f1', 'fabio@exemplo.com');
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f1","email":"fabio@exemplo.com","role":"authenticated"}';
+do $$ declare blocked boolean; v numeric; begin
+  -- Água e treino não são dado de saúde: registra sem consentimento.
+  v := public.track_counter_add('move', 'agua', 250);
+  v := public.track_counter_add('move', 'agua', 500);
+  assert v = 750, 'o contador soma os toques do dia';
+  v := public.track_counter_add('move', 'agua', -1000);
+  assert v = 0, 'desfazer não deixa o contador negativo';
+  insert into public.track_entries (track_id, metric, entry_key, value, data, day)
+    values ('move', 'treino', 'a1', 50, '{"modalidade":"Funcional","duracao":50}', current_date + 3);
+  assert (select day from public.track_entries where entry_key = 'a1') = (now() at time zone 'America/Sao_Paulo')::date,
+    'registro no futuro vira o dia de hoje';
+  -- Peso é dado de saúde: sem consentimento, não grava.
+  blocked := false;
+  begin insert into public.track_entries (track_id, metric, value) values ('move', 'peso', 82.4); exception when others then blocked := true; end;
+  assert blocked, 'peso sem consentimento deveria ser bloqueado';
+  update public.profiles set health_consent_at = now() where id = auth.uid();
+  insert into public.track_entries (track_id, metric, value) values ('move', 'peso', 82.4);
+  insert into public.track_entries (track_id, metric, value, data) values ('respira', 'gad7', 8, '{"q1":"Vários dias"}');
+  assert (select count(*) from public.track_entries) = 4, 'Fábio vê os próprios registros';
+  blocked := false;
+  begin insert into public.track_entries (track_id, metric, value) values ('aquecimento', 'agua', 1); exception when others then blocked := true; end;
+  assert blocked, 'só trilhas com painel';
+  -- Retirar o consentimento apaga peso e GAD-7, mas mantém água e treinos.
+  update public.profiles set health_consent_at = null where id = auth.uid();
+  assert (select count(*) from public.track_entries) = 2, 'retirar o consentimento apaga os dados de saúde do painel';
+  assert jsonb_array_length(public.export_my_data() -> 'painel_das_trilhas') = 2, 'exportação traz o painel';
+end $$;
+commit;
+
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a","email":"ana@exemplo.com","role":"authenticated"}';
+do $$ begin
+  assert (select count(*) from public.track_entries) = 0, 'Ana não vê o painel do Fábio';
+  update public.track_entries set value = 1;
+  delete from public.track_entries;
+end $$;
+commit;
+do $$ begin
+  assert (select count(*) from public.track_entries where user_id = '00000000-0000-0000-0000-0000000000f1') = 2, 'Ana não altera nem apaga o painel do Fábio';
+  assert (select count(*) from public.tracks where status = 'live') = 6, 'todas as trilhas no ar';
+end $$;
+
 -- ——— Apagar a conta remove os dados pessoais em cascata ———
 delete from auth.users where id = '00000000-0000-0000-0000-00000000000b';
 do $$ begin

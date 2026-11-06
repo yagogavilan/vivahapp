@@ -38,6 +38,20 @@ import type {
   Track,
 } from './types';
 
+import type { Entry } from '../domain/panels';
+
+/** Registro do painel da trilha para salvar (sem id cria; com id edita). */
+export interface TrackEntryInput {
+  id?: string;
+  trackId: string;
+  metric: string;
+  day?: string;
+  /** '' = um por dia; outro valor = vários no dia ou itens de lista. */
+  key?: string;
+  value: number | null;
+  data: Record<string, unknown>;
+}
+
 export interface SessionUser {
   id: string;
   email: string;
@@ -169,6 +183,14 @@ export interface Api {
 
   getFavorites(): Promise<Favorite[]>;
   setFavorite(itemType: Favorite['itemType'], itemId: string, on: boolean): Promise<void>;
+
+  // Painel da trilha (água, peso, treinos, sono, gastos, conquistas…).
+  /** Registros das trilhas `stores` desde `sinceDay`, mais perfis e itens de qualquer data. */
+  getTrackEntries(stores: string[], sinceDay: string): Promise<Entry[]>;
+  saveTrackEntry(entry: TrackEntryInput): Promise<void>;
+  deleteTrackEntry(id: string): Promise<void>;
+  /** Soma num contador do dia (pode ser negativo para desfazer) e devolve o total. */
+  addTrackCounter(trackId: string, metric: string, delta: number): Promise<number>;
 
   // Página de admin (o banco só aceita de quem tem role admin).
   adminUpdateTrack(id: string, patch: AdminTrackPatch): Promise<void>;

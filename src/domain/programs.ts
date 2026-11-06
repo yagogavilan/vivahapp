@@ -28,6 +28,8 @@ export interface Field {
   /** checklist: id do campo de lista do plano que vira itens para marcar. */
   from?: string;
   optional?: boolean;
+  /** Painel: rótulo curto quando a resposta de sim/não é "sim" (ex.: "em jejum"). */
+  tag?: string;
 }
 
 export type Values = Record<string, string | number | boolean | string[] | number[] | undefined>;

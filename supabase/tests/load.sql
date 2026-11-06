@@ -82,6 +82,14 @@ insert into public.activity_log (user_id, day, kind, ref, minutes)
 select a.id, current_date - d, 'escudo', 'escudo-' || (current_date - d), 5
   from alunos a cross join generate_series(0, 49) d;
 
+-- Painel das trilhas: 30 dias de água, passos, peso, treino e gastos (1,5 milhão de registros)
+insert into public.track_entries (user_id, track_id, metric, day, entry_key, value, data)
+select a.id, m.track, m.metric, current_date - d, case when m.metric in ('treino', 'gasto') then 'k' || d else '' end,
+       m.v + (a.n % 7) * 10, case when m.metric = 'treino' then '{"modalidade":"Funcional","duracao":40,"intensidade":"Moderada"}'::jsonb
+                                  when m.metric = 'gasto' then '{"tipo":"Saída","valor":45,"categoria":"Mercado"}'::jsonb else '{}'::jsonb end
+  from alunos a cross join generate_series(0, 29) d
+  cross join (values ('move', 'agua', 1800), ('move', 'passos', 7000), ('move', 'peso', 80), ('move', 'treino', 40), ('prospera', 'gasto', 45)) m(track, metric, v);
+
 set session_replication_role = origin;
 select public.rebuild_point_totals();
 analyze;

@@ -58,7 +58,10 @@ describe('espaços e jornada', () => {
     expect(spaceAccess(AQUECIMENTO, tracks, courses, new Set())).toBe('open');
     expect(spaceAccess('respira', tracks, courses, new Set())).toBe('locked');
     expect(spaceAccess('respira', tracks, courses, new Set(['protocolo-desligando-a-mente']))).toBe('open');
-    expect(spaceAccess('ritmo', tracks, courses, new Set(['semana-organizada']))).toBe('soon');
+    expect(spaceAccess('ritmo', tracks, courses, new Set(['semana-organizada']))).toBe('open');
+    // Trilha marcada como "em breve" pelo admin: continua em breve mesmo com acesso.
+    const soon = tracks.map((t) => (t.id === 'ritmo' ? { ...t, status: 'soon' as const } : t));
+    expect(spaceAccess('ritmo', soon, courses, new Set(['semana-organizada']))).toBe('soon');
   });
 
   it('curso de recompensa não abre a trilha nem aparece na lista de cursos', () => {

@@ -1,3 +1,5 @@
+import { dayKey } from '../domain/dates';
+import { PERSISTENT_METRICS } from '../domain/panels';
 import { requireSupabase } from '../lib/supabase';
 import type { Api, Catalog, ProfilePatch, SessionUser } from './api';
 import type {
@@ -685,5 +687,43 @@ export const supabaseApi: Api = {
 
   async adminSetCheckout(productId, checkoutUrl) {
     check(await requireSupabase().from('products').update({ checkout_url: checkoutUrl }).eq('id', productId));
+  },
+  async getTrackEntries(stores, sinceDay) {
+    const rows = check(
+      await requireSupabase()
+        .from('track_entries')
+        .select('*')
+        .eq('user_id', await currentUserId())
+        .in('track_id', stores)
+        .or(`day.gte.${sinceDay},metric.in.(${PERSISTENT_METRICS.join(',')})`)
+        .order('day', { ascending: false })
+        .limit(3000),
+    ) as Row[];
+    return rows.map((r) => ({
+      id: r.id, trackId: r.track_id, metric: r.metric, day: r.day, key: r.entry_key, value: r.value === null ? null : Number(r.value), data: r.data ?? {}, createdAt: r.created_at,
+    }));
+  },
+
+  async saveTrackEntry(e) {
+    const sb = requireSupabase();
+    if (e.id) {
+      check(await sb.from('track_entries').update({ value: e.value, data: e.data }).eq('id', e.id));
+      return;
+    }
+    const row: Record<string, unknown> = {
+      user_id: await currentUserId(), track_id: e.trackId, metric: e.metric, entry_key: e.key ?? '', value: e.value, data: e.data,
+    };
+    if (e.day) row.day = e.day;
+    else row.day = dayKey(new Date());
+    check(await sb.from('track_entries').upsert(row, { onConflict: 'user_id,track_id,metric,day,entry_key' }));
+  },
+
+  async deleteTrackEntry(id) {
+    check(await requireSupabase().from('track_entries').delete().eq('id', id));
+  },
+
+  async addTrackCounter(trackId, metric, delta) {
+    const v = check(await requireSupabase().rpc('track_counter_add', { p_track: trackId, p_metric: metric, p_delta: delta })) as unknown;
+    return Number(v) || 0;
   },
 };

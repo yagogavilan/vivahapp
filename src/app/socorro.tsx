@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AfterCheck, EmergencyCard, ExercisePlayer } from '@/components/care';
 import { Icon, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn } from '@/components/visual';
-import { useLogActivity } from '@/data/hooks';
+import { useLogActivity, useTrackEntryMutations } from '@/data/hooks';
 import { exerciseById, EXERCISES, SOS_BY_TRACK } from '@/domain/exercises';
 import { AQUECIMENTO } from '@/domain/spaces';
 import { tap } from '@/lib/haptics';
@@ -20,6 +20,7 @@ export default function Socorro() {
   const [selected, setSelected] = useState<string | null>(ex ?? null);
   const [finished, setFinished] = useState(false);
   const log = useLogActivity();
+  const panel = useTrackEntryMutations();
   const current = selected ? exerciseById(selected) : undefined;
 
   return (
@@ -38,6 +39,8 @@ export default function Socorro() {
             onDone={() => {
               setFinished(true);
               log.mutate({ kind: 'foco', ref: `socorro-${current.id}`, minutes: 3 });
+              // Na Respira, os minutos entram no painel (Respiração e pausas).
+              if (track === 'respira') panel.add.mutate({ trackId: 'respira', metric: 'respiracao', delta: 3 });
             }}
           />
         </FadeIn>
