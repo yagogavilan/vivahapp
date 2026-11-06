@@ -117,7 +117,7 @@ export function LifeTestResult({ result, tracks, onStart, startLabel }: {
         <JourneyList tracks={tracks} recommendedId={result.recommendedTrackId} onPick={onStart} />
       </View>
 
-      {rec ? <Button label={`${startLabel}: ${rec.title}`} icon="arrow-right" onPress={() => onStart(rec.id)} /> : null}
+      {rec ? <Button label={`${startLabel}: ${rec.title}`} onPress={() => onStart(rec.id)} /> : null}
     </View>
   );
 }

@@ -67,7 +67,6 @@ export default function Comunidade() {
       <Screen>
         <SpaceHeader space={sp} />
         <View style={{ gap: 4 }}>
-          <Txt variant="eyebrow">Comunidade {sp.title}</Txt>
           <Txt variant="hero">Uma comunidade só de quem assina a trilha</Txt>
           <Txt>Apoio, conquistas e dicas de quem vive o mesmo que você.</Txt>
         </View>
@@ -90,7 +89,6 @@ export default function Comunidade() {
     <Screen refreshing={posts.isRefetching} onRefresh={() => { posts.refetch(); kindness.refetch(); }}>
       <SpaceHeader space={sp} />
       <View style={{ gap: 4 }}>
-        <Txt variant="eyebrow">Comunidade {sp.title}</Txt>
         <Txt variant="hero">Ninguém evolui sozinho</Txt>
       </View>
 

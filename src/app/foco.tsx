@@ -82,7 +82,7 @@ export default function Foco() {
   return (
     <Screen padTop={false}>
       <View style={{ gap: space.xs }}>
-        <Txt variant="eyebrow">Trilha Ritmo · gestão do tempo</Txt>
+        <Txt variant="eyebrow">Trilha Ritmo</Txt>
         <Txt variant="hero">Bloco de foco</Txt>
         <Txt>Escolha uma tarefa, silencie as notificações e fique só nela até o tempo acabar.</Txt>
       </View>

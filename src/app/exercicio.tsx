@@ -21,7 +21,7 @@ export default function Exercicio() {
     <Screen padTop={false}>
       <TrackContextBar trackId={track} />
       <View style={{ gap: space.xs }}>
-        <Txt variant="eyebrow">Exercício · {exercise.durationLabel}</Txt>
+        <Txt variant="eyebrow">{exercise.durationLabel}</Txt>
         <Txt variant="hero">{exercise.title}</Txt>
         <Txt>{exercise.subtitle}</Txt>
       </View>

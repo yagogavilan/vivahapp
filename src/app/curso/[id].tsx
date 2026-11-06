@@ -86,7 +86,7 @@ export default function Curso() {
                   As aulas seguem a ordem da trilha. Conclua antes {blockingCourse && blockingCourse.id !== course.id ? `o curso ${blockingCourse.title}` : 'a aula anterior'}.
                 </Txt>
               </Row>
-              <Button label={blockingCourse && blockingCourse.id !== course.id ? `Continuar em ${blockingCourse.title}` : `Ir para: ${nextLocked.title}`} icon="arrow-right" variant="ghost" onPress={() => openLesson(nextLocked)} />
+              <Button label={blockingCourse && blockingCourse.id !== course.id ? `Continuar em ${blockingCourse.title}` : `Ir para: ${nextLocked.title}`} variant="ghost" onPress={() => openLesson(nextLocked)} />
             </View>
           ) : next ? (
             <Button label={percent > 0 ? `Continuar: ${next.title}` : 'Começar'} icon="play" onPress={() => openLesson(next)} />

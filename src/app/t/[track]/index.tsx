@@ -123,8 +123,8 @@ export default function HojeDaTrilha() {
   const checkinCard = !checkin.today ? (
     <FadeIn>
       <View style={styles.checkinCard}>
-        <Txt variant="title" style={{ color: colors.onDark }}>Como você está?</Txt>
-        <MoodPicker dark onPick={(mood) => go('/checkin', { mood: String(mood) })} />
+        <Txt variant="title">Como você está?</Txt>
+        <MoodPicker onPick={(mood) => go('/checkin', { mood: String(mood) })} />
       </View>
     </FadeIn>
   ) : (
@@ -176,7 +176,7 @@ export default function HojeDaTrilha() {
         })}
       </Row>
       {journey.next ? (
-        <Button label={journey.next.title} icon="arrow-right" onPress={() => openStep(journey.next!)} />
+        <Button label={journey.next.title} onPress={() => openStep(journey.next!)} />
       ) : (
         <Row gap={6} style={{ justifyContent: 'center' }}><Icon name="award" size={18} color={colors.coralText} /><Txt variant="bodyStrong">Dia completo</Txt></Row>
       )}
@@ -262,7 +262,7 @@ export default function HojeDaTrilha() {
 }
 
 const styles = StyleSheet.create({
-  checkinCard: { backgroundColor: colors.petrol, borderRadius: radius.lg, padding: space.lg, gap: space.lg },
+  checkinCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: space.lg, gap: space.lg },
   day: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg, gap: space.md },
   stepItem: { alignItems: 'center', gap: 4, flex: 1 },
   checkinIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },

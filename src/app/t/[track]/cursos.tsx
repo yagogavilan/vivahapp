@@ -83,7 +83,6 @@ export default function Cursos() {
     <Screen refreshing={library.isRefetching} onRefresh={library.refetch}>
       <SpaceHeader space={sp} />
       <View style={{ gap: 4 }}>
-        <Txt variant="eyebrow">Cursos · {sp.title}</Txt>
         <Txt variant="hero">{subscription === 'open' ? 'Seus cursos' : 'Os cursos da trilha'}</Txt>
         <Row gap={6}><Icon name="list" size={14} color={colors.textSubtle} /><Txt variant="small">Em ordem: cada aula abre a próxima</Txt></Row>
       </View>

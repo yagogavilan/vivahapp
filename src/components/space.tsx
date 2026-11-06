@@ -19,10 +19,7 @@ export function spaceIcon(s: Pick<Space, 'area'>): IconName {
 export function SpaceCover({ space, children, style, muted }: { space: Pick<Space, 'area'>; children?: ReactNode; style?: ViewStyle; muted?: boolean }) {
   if (space.area) return <TrackCover area={space.area} muted={muted} style={style}>{children}</TrackCover>;
   return (
-    <LinearGradient colors={['#F4865C', '#E2674A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.cover, style]}>
-      <View pointerEvents="none" style={styles.watermark}>
-        <Icon name="sunrise" size={96} color="rgba(255,255,255,0.16)" />
-      </View>
+    <LinearGradient colors={['#F2A27F', '#F2A27F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.cover, style]}>
       {children}
     </LinearGradient>
   );

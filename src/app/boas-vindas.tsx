@@ -60,7 +60,7 @@ export default function BoasVindas() {
         <View style={{ gap: space.lg }}>
           <Txt variant="hero">Como podemos te chamar?</Txt>
           <Field label="Seu nome" value={name} onChangeText={setName} placeholder="Nome e sobrenome" autoComplete="name" textContentType="name" />
-          <Button label="Continuar" icon="arrow-right" onPress={() => setStep(1)} disabled={name.trim().length < 2} />
+          <Button label="Continuar" onPress={() => setStep(1)} disabled={name.trim().length < 2} />
         </View>
       ) : null}
 
@@ -94,7 +94,7 @@ export default function BoasVindas() {
               </View>
             ))}
           </Row>
-          <Button label="Começar o teste" icon="arrow-right" onPress={() => setStep(3)} />
+          <Button label="Começar o teste" onPress={() => setStep(3)} />
         </View>
       ) : null}
 

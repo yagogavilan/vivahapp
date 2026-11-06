@@ -47,7 +47,7 @@ export default function PainelDaTrilha() {
                 <Txt variant="bodyStrong">{m.title}</Txt>
                 {m.health ? <Icon name="lock" size={12} color={colors.textSubtle} /> : null}
               </Row>
-              <Txt variant="small" numberOfLines={2}>{m.about}</Txt>
+              <Txt variant="small" numberOfLines={1}>{m.about.slice(0, m.about.indexOf('. ') > 0 ? m.about.indexOf('. ') + 1 : undefined)}</Txt>
             </View>
             <View style={{ alignItems: 'flex-end', gap: 2 }}>
               <Txt variant="small" style={{ fontSize: 11 }}>{KIND_LABEL[m.kind]}</Txt>

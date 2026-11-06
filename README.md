@@ -22,6 +22,7 @@ Este é o **MVP de 01/12/2026**:
 - **Hoje** com humor em um toque (carinhas), o dia em 5 ícones com o próximo passo em destaque e, na Respira, a **respiração guiada interativa**: círculo que enche e esvazia, contagem grande, sons para inspirar, segurar e soltar, som do mar opcional, vibração e escolha de 1, 2 ou 3 minutos. Os sons são gerados por `scripts/generate-sounds.py` (sem direitos de terceiros).
 - Novos exercícios: suspiro cíclico (Balban et al., Cell Reports Medicine, 2023) e coerência cardíaca (6 respirações por minuto).
 - Menos texto em todas as telas, números pequenos com botões de − e +.
+- **Identidade visual própria:** títulos em Bricolage Grotesque, fundo verde-névoa (não o creme comum), botão principal em petróleo e coral só para destaque (Recomendada, Socorro, ponto de progresso). Superfícies chapadas, sem sombras nem gradientes decorativos, textos em caixa normal. Cada tela tem um único bloco escuro, o que pede atenção (na Respira, a respiração).
 
 ### Loja e Socorro (versão 7)
 

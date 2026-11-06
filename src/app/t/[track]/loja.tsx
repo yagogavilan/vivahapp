@@ -41,7 +41,6 @@ export default function Loja() {
     <Screen refreshing={library.isRefetching || summary.isRefetching} onRefresh={() => { library.refetch(); summary.refetch(); }}>
       <SpaceHeader space={sp} />
       <View style={{ gap: 4 }}>
-        <Txt variant="eyebrow">Loja · {sp.title}</Txt>
         <Txt variant="hero">{tab === 'produtos' ? 'Produtos Vivah' : 'Sua bondade vale prêmios'}</Txt>
       </View>
       <View style={styles.segment} accessibilityRole="tablist">

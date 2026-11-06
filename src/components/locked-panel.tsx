@@ -82,7 +82,7 @@ function BuyPanel({ title, priceLabel, productId, cta = 'Comprar', reason, soon,
         <Txt style={{ color: colors.onDarkMuted }}>Os cursos chegam em {soon.toLowerCase()}. As ferramentas do dia já estão abertas.</Txt>
       ) : product?.checkoutUrl ? (
         <>
-          <Button label={`${cta}${priceLabel ? ` · ${priceLabel}` : ''}`} icon="arrow-right" onPress={() => open(product.checkoutUrl!)} />
+          <Button label={`${cta}${priceLabel ? ` · ${priceLabel}` : ''}`} onPress={() => open(product.checkoutUrl!)} />
           <Txt variant="small" style={{ color: colors.onDarkMuted }}>
             O pagamento usa o seu e-mail ({user?.email}). Aprovado o pagamento, o acesso aparece aqui, no computador e no celular.
           </Txt>

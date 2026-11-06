@@ -106,8 +106,8 @@ export function Button({
   style?: ViewStyle;
 }) {
   const v = {
-    primary: { bg: colors.coral, fg: colors.deep, border: colors.coral },
-    secondary: { bg: colors.petrol, fg: colors.onDark, border: colors.petrol },
+    primary: { bg: colors.petrol, fg: colors.onDark, border: colors.petrol },
+    secondary: { bg: colors.coral, fg: colors.deep, border: colors.coral },
     ghost: { bg: 'transparent', fg: colors.petrol, border: colors.border },
     light: { bg: colors.surface, fg: colors.petrol, border: colors.surface },
     danger: { bg: 'transparent', fg: colors.danger, border: colors.danger },

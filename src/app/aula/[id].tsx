@@ -92,7 +92,7 @@ export default function Aula() {
       <Screen padTop={false}>
         <TrackContextBar trackId={course.trackId} />
         <Empty icon="lock" title="Conclua a aula anterior primeiro" text={`As aulas da trilha seguem uma ordem. A sua próxima aula é: ${before.title}.`}>
-          <Button label={`Ir para a aula da vez`} icon="arrow-right" onPress={() => router.replace({ pathname: '/aula/[id]', params: { id: before.id } })} />
+          <Button label={`Ir para a aula da vez`} onPress={() => router.replace({ pathname: '/aula/[id]', params: { id: before.id } })} />
         </Empty>
       </Screen>
     );
@@ -191,12 +191,12 @@ export default function Aula() {
           nextOpen ? (
             <Button
               label={`Próxima: ${next.title}`}
-              icon="arrow-right"
+             
               variant={completed ? 'primary' : 'ghost'}
               onPress={() => router.replace({ pathname: '/aula/[id]', params: { id: next.id } })}
             />
           ) : (
-            <Txt variant="small">A próxima aula ({next.title}) abre quando você concluir esta.</Txt>
+            <Row gap={6}><Icon name="lock" size={14} color={colors.textSubtle} /><Txt variant="small" style={{ flex: 1 }}>Próxima: {next.title}</Txt></Row>
           )
         ) : null}
       </View>

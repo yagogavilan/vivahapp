@@ -48,7 +48,6 @@ export default function Perfil() {
   return (
     <Screen refreshing={library.isRefetching} onRefresh={library.refetch}>
       <View style={{ gap: space.xs }}>
-        <Txt variant="eyebrow">Perfil · {sp.title}</Txt>
         <Txt variant="hero">{profile?.fullName || 'Aluno Vivah'}</Txt>
         <Txt>{user?.email}</Txt>
         <View style={{ alignSelf: 'flex-start', marginTop: space.xs }}>

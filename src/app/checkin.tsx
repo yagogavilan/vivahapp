@@ -131,7 +131,7 @@ function Questions({ trackId, title, initialMood, onSaved }: { trackId: string; 
       <TrackContextBar trackId={trackId} />
       <View style={{ gap: space.sm }}>
         <Row style={{ justifyContent: 'space-between' }}>
-          <Txt variant="eyebrow">Check-in · {title}</Txt>
+          <Txt variant="eyebrow">Check-in</Txt>
           <Txt variant="small">{i + 1} de {questions.length}</Txt>
         </Row>
         <ProgressBar value={((i + 1) / questions.length) * 100} color={colors.coral} />
@@ -146,7 +146,7 @@ function Questions({ trackId, title, initialMood, onSaved }: { trackId: string; 
         {q.type === 'multi' ? (
           <Button
             label={last ? 'Ver meu resumo' : 'Continuar'}
-            icon="arrow-right"
+           
             disabled={!isAnswered(q, answers)}
             loading={save.isPending}
             onPress={() => (last ? submit(answers) : setI(i + 1))}

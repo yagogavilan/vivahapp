@@ -33,7 +33,7 @@ export default function Apoio() {
     <Screen padTop={false}>
       <TrackContextBar trackId={track} />
       <View style={{ gap: space.xs }}>
-        <Txt variant="eyebrow">Apoio · +5 pontos quando confirmado</Txt>
+        <Txt variant="eyebrow">Vale 5 pontos quando a pessoa confirmar</Txt>
         <Txt variant="hero">{spec.label}</Txt>
         <Txt>{spec.hint}</Txt>
       </View>

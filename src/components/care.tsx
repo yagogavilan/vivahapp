@@ -76,7 +76,7 @@ function StepsPlayer({ exercise, onDone }: { exercise: Exercise; onDone: () => v
           {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
         </Txt>
       ) : null}
-      <Button label={i + 1 >= steps.length ? 'Concluir' : 'Próximo'} icon="arrow-right" onPress={next} />
+      <Button label={i + 1 >= steps.length ? 'Concluir' : 'Próximo'} onPress={next} />
     </View>
   );
 }

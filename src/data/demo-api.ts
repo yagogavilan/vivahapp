@@ -204,8 +204,16 @@ const demoAccounts = new Map<string, { name: string; password: string; confirmed
   ['admin@vivah.com.br', { name: 'Equipe Vivah', password: 'vivah1234', confirmed: true }],
 ]);
 const resetCodes = new Set<string>();
+/** O que cada conta fez na demonstração, para quem sai e entra de novo não recomeçar do zero. */
+const savedSessions = new Map<string, ReturnType<typeof initialState>>();
 
 function startDemoSession(email: string, name: string | null) {
+  const saved = savedSessions.get(email);
+  if (saved) {
+    state = saved;
+    emit();
+    return;
+  }
   const fresh = initialState();
   state = { ...fresh, user: { id: 'demo-user', email } };
   seedHistory();
@@ -272,12 +280,16 @@ export const demoApi: Api = {
     startDemoSession(email.trim().toLowerCase(), null);
   },
   async signOut() {
-    state.user = null;
-    state.profile = null;
+    if (state.user) savedSessions.set(state.user.email, { ...state });
+    state = { ...state, user: null, profile: null };
     emit();
   },
   async deleteAccount() {
     await wait();
+    if (state.user) {
+      savedSessions.delete(state.user.email);
+      demoAccounts.delete(state.user.email);
+    }
     state = initialState();
     emit();
   },

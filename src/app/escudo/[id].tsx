@@ -34,7 +34,7 @@ export default function Escudo() {
         <Row style={{ justifyContent: 'space-between' }}>
           <Row>
             <Icon name="shield" color={colors.coral} />
-            <Txt variant="eyebrow" style={{ color: colors.coral }}>Escudo Anticrise · {formatDayLabel(audio.publishDate, today)}</Txt>
+            <Txt variant="eyebrow" style={{ color: colors.coral }}>Escudo Anticrise de {formatDayLabel(audio.publishDate, today).toLowerCase()}</Txt>
           </Row>
           <Pressable
             onPress={() => toggleFav.mutate({ itemType: 'escudo', itemId: audio.id, on: !isFav })}

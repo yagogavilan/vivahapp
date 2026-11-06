@@ -1,4 +1,4 @@
-import { Fraunces_400Regular_Italic, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
+import { BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque';
 import {
   NunitoSans_400Regular,
   NunitoSans_600SemiBold,
@@ -118,8 +118,8 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_400Regular_Italic,
+    BricolageGrotesque_700Bold,
+    BricolageGrotesque_600SemiBold,
     NunitoSans_400Regular,
     NunitoSans_600SemiBold,
     NunitoSans_700Bold,

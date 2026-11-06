@@ -153,8 +153,8 @@ export function BreathSession({ exercise, onDone, compact, minutesOptions = [1, 
         <View style={{ alignItems: 'center', gap: 2 }}>
           {status === 'idle' ? (
             <>
-              <Icon name="play" size={34} color={colors.onDark} />
-              <Txt variant="bodyStrong" style={{ color: colors.onDark }}>Toque para começar</Txt>
+              <View style={{ marginLeft: 4, marginBottom: 4 }}><Icon name="play" size={34} color={colors.onDark} /></View>
+              <Txt variant="bodyStrong" style={{ color: colors.onDark }}>Começar</Txt>
             </>
           ) : status === 'done' ? (
             <>

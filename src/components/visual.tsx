@@ -5,8 +5,6 @@ import Svg, { Circle } from 'react-native-svg';
 
 import type { LifeArea } from '../data/types';
 import { areaGradient, colors, radius, space, WIDE } from '../theme';
-import { AREA_ICON } from './area-icons';
-import { Icon } from './ui';
 
 /** Capa da trilha: gradiente da área, círculos suaves e o ícone grande ao fundo. */
 export function TrackCover({ area, children, style, muted }: { area: LifeArea; children?: ReactNode; style?: ViewStyle; muted?: boolean }) {
@@ -17,11 +15,6 @@ export function TrackCover({ area, children, style, muted }: { area: LifeArea; c
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.cover, style]}>
-      <View pointerEvents="none" style={[styles.ring, { borderColor: muted ? 'rgba(18,79,88,0.06)' : 'rgba(255,255,255,0.08)' }]} />
-      <View pointerEvents="none" style={[styles.ringSmall, { borderColor: muted ? 'rgba(18,79,88,0.06)' : 'rgba(244,134,92,0.25)' }]} />
-      <View pointerEvents="none" style={styles.watermark}>
-        <Icon name={AREA_ICON[area]} size={96} color={muted ? 'rgba(18,79,88,0.08)' : 'rgba(255,255,255,0.10)'} />
-      </View>
       {children}
     </LinearGradient>
   );
@@ -94,16 +87,12 @@ export function ScreenSkeleton() {
 }
 
 /** Entrada suave (sobe e aparece), com atraso opcional para cascata. */
-export function FadeIn({ children, delay = 0, style }: { children: ReactNode; delay?: number; style?: ViewStyle }) {
-  const [v] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    Animated.timing(v, { toValue: 1, duration: 380, delay, useNativeDriver: true }).start();
-  }, [v, delay]);
-  return (
-    <Animated.View style={[{ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }, style]}>
-      {children}
-    </Animated.View>
-  );
+/**
+ * Antes, cada bloco entrava deslizando. Agora a tela aparece inteira de uma vez:
+ * o movimento fica para o que responde ao toque (respiração, botões, progresso).
+ */
+export function FadeIn({ children, style }: { children: ReactNode; delay?: number; style?: ViewStyle }) {
+  return <View style={style}>{children}</View>;
 }
 
 export function useWide() {

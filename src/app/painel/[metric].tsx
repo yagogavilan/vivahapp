@@ -61,8 +61,7 @@ export default function MetricaDoPainel() {
           <Icon name={def.icon} size={24} color={colors.coralText} />
           <Txt variant="hero" style={{ flex: 1 }}>{def.title}</Txt>
         </Row>
-        <Txt variant="small">{def.about}</Txt>
-        {def.source ? <Txt variant="small" style={{ fontSize: 12, color: colors.textSubtle }}>Referência: {def.source}</Txt> : null}
+        <About text={def.about} source={def.source} />
       </View>
 
       {locked ? (
@@ -83,6 +82,28 @@ export default function MetricaDoPainel() {
         </>
       )}
     </Screen>
+  );
+}
+
+/** Explicação sob demanda: a primeira frase e o resto em "Saiba mais". */
+function About({ text, source }: { text: string; source?: string }) {
+  const [open, setOpen] = useState(false);
+  const cut = text.indexOf('. ');
+  const first = cut > 0 ? text.slice(0, cut + 1) : text;
+  const rest = text.slice(first.length).trim();
+  return (
+    <View style={{ gap: 4 }}>
+      <Txt variant="small">{open ? text : first}</Txt>
+      {open && source ? <Txt variant="small" style={{ fontSize: 12, color: colors.textSubtle }}>Referência: {source}</Txt> : null}
+      {rest || source ? (
+        <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" hitSlop={8}>
+          <Row gap={4}>
+            <Icon name={open ? 'chevron-up' : 'info'} size={14} color={colors.coralText} />
+            <Txt variant="small" style={{ color: colors.coralText }}>{open ? 'Mostrar menos' : 'Saiba mais'}</Txt>
+          </Row>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -239,7 +260,7 @@ function LogView({ def, store, mine, today }: { def: MetricDef; store: string; m
       </Card>
       {mine.length ? (
         <Card style={{ gap: space.sm }}>
-          <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>{def.valueField ? `${def.unit === 'R$' ? 'Valor' : 'Total'} por dia · 14 dias` : 'Registros por dia · 14 dias'}</Txt>
+          <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>{def.valueField ? `${def.unit === 'R$' ? 'Valor' : 'Total'} por dia, últimos 14 dias` : 'Registros por dia, últimos 14 dias'}</Txt>
           <Bars series={series} />
         </Card>
       ) : null}
