@@ -16,7 +16,9 @@ import {
   useSaveProgress,
   useToggleFavorite,
 } from '@/data/hooks';
-import { completion, lessonOpen } from '@/domain/access';
+import { completion, isTrackCourse, lessonOpen } from '@/domain/access';
+import { currentLesson, sequenceInfo, trackSequence } from '@/domain/sequence';
+import { TrackContextBar } from '@/components/space';
 import { success } from '@/lib/haptics';
 import { colors, space } from '@/theme';
 
@@ -80,6 +82,22 @@ export default function Aula() {
   const state = lib.stateOf(course);
   const mine = progress.data?.find((p) => p.lessonId === lesson.id);
 
+  const inSequence = isTrackCourse(course) && state === 'open';
+  const sequence = inSequence ? trackSequence(course.trackId, lib.courses, lib.modules, lib.lessons) : [];
+  const seq = inSequence ? sequenceInfo(sequence, progress.data ?? []) : null;
+  // Aula travada: leva o aluno para a aula da vez (a primeira ainda não concluída).
+  const before = seq?.locked.has(lesson.id) ? (currentLesson(sequence, progress.data ?? []) ?? seq.previous.get(lesson.id)) : undefined;
+  if (before) {
+    return (
+      <Screen padTop={false}>
+        <TrackContextBar trackId={course.trackId} />
+        <Empty icon="lock" title="Conclua a aula anterior primeiro" text={`As aulas da trilha seguem uma ordem. A sua próxima aula é: ${before.title}.`}>
+          <Button label={`Ir para a aula da vez`} icon="arrow-right" onPress={() => router.replace({ pathname: '/aula/[id]', params: { id: before.id } })} />
+        </Empty>
+      </Screen>
+    );
+  }
+
   if (!lessonOpen(lesson, state) || !media.data) {
     return (
       <Screen padTop={false}>
@@ -95,9 +113,10 @@ export default function Aula() {
     .sort((a, b) => a.sort - b.sort)
     .flatMap((m) => lib.lessons.filter((l) => l.moduleId === m.id).sort((a, b) => a.sort - b.sort));
   const idx = ordered.findIndex((l) => l.id === lesson.id);
-  const next = ordered[idx + 1];
-  const nextOpen = next && lessonOpen(next, state);
   const completed = Boolean(mine?.completedAt);
+  // Na trilha, a próxima aula pode ser a primeira do curso seguinte; ela abre quando esta é concluída.
+  const next = inSequence ? sequence[sequence.findIndex((l) => l.id === lesson.id) + 1] : ordered[idx + 1];
+  const nextOpen = next && (inSequence ? completed : lessonOpen(next, state));
   const percent = completion(ordered, progress.data ?? []);
   const isFav = (favorites.data ?? []).some((f) => f.itemType === 'lesson' && f.itemId === lesson.id);
 
@@ -110,6 +129,7 @@ export default function Aula() {
 
   return (
     <Screen padTop={false}>
+      <TrackContextBar trackId={course.trackId} />
       <View style={{ gap: space.xs }}>
         <Row style={{ justifyContent: 'space-between' }}>
           <LinkText label={course.title} onPress={() => router.push({ pathname: '/curso/[id]', params: { id: course.id } })} />
@@ -176,7 +196,7 @@ export default function Aula() {
               onPress={() => router.replace({ pathname: '/aula/[id]', params: { id: next.id } })}
             />
           ) : (
-            <Button label="Ver o curso completo" variant="ghost" onPress={() => router.replace({ pathname: '/curso/[id]', params: { id: course.id } })} />
+            <Txt variant="small">A próxima aula ({next.title}) abre quando você concluir esta.</Txt>
           )
         ) : null}
       </View>

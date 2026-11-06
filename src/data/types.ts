@@ -14,6 +14,8 @@ export interface Track {
   status: TrackStatus;
   launchLabel: string;
   sort: number;
+  /** Preço da assinatura anual da trilha (só aparece na web). */
+  priceLabel: string | null;
 }
 
 export type CourseKind = 'entrada' | 'bonus' | 'programa' | 'acompanhamento';
@@ -34,7 +36,12 @@ export interface Course {
   minKindnessLevel: number | null;
   /** Só abre resgatando uma recompensa com pontos (não é vendido). */
   rewardOnly: boolean;
+  /** Low ticket: mini produto vendido à parte (aula curta, planilha ou ferramenta). Fora da sequência da trilha. */
+  lowTicket: boolean;
+  format: LowTicketFormat | null;
 }
+
+export type LowTicketFormat = 'aula' | 'planilha' | 'ferramenta';
 
 export interface Module {
   id: string;
@@ -269,6 +276,8 @@ export interface DiagnosticResult {
   answers: Record<string, number>;
   scores: Record<LifeArea, number>;
   recommendedTrackId: string;
+  /** Momento de vida do teste do primeiro acesso (reequilibrio, organizacao, estabilidade, crescimento). */
+  moment: string | null;
 }
 
 export type AlertLevel = 'bem' | 'atencao' | 'critico';
@@ -300,6 +309,8 @@ export interface Preferences {
 
 export interface Profile {
   id: string;
+  /** 'admin' abre a página de gestão de cursos. */
+  role: 'aluno' | 'admin';
   email: string;
   fullName: string | null;
   goal: string | null;

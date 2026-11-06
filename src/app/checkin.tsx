@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSession } from '@/auth/session';
 import { AfterCheck, EmergencyCard, ExercisePlayer } from '@/components/care';
 import { FeelingChip } from '@/components/feeling';
+import { TrackContextBar } from '@/components/space';
 import { Button, Card, Icon, type IconName, Loading, ProgressBar, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn } from '@/components/visual';
 import { useLibrary, useSaveCheckin, useTodayCheckin, useUpdateProfile } from '@/data/hooks';
@@ -125,6 +126,7 @@ function Questions({ trackId, title, onSaved }: { trackId: string; title: string
 
   return (
     <Screen padTop={false}>
+      <TrackContextBar trackId={trackId} />
       <View style={{ gap: space.sm }}>
         <Row style={{ justifyContent: 'space-between' }}>
           <Txt variant="eyebrow">Check-in · {title}</Txt>
@@ -250,6 +252,7 @@ function Summary({ trackId, saved, yesterday, onRedo }: { trackId: string; saved
 
   return (
     <Screen padTop={false}>
+      <TrackContextBar trackId={trackId} />
       <FadeIn>
         <View style={[styles.hero, { backgroundColor: st.bg }]}>
           <Row style={{ justifyContent: 'space-between' }}>

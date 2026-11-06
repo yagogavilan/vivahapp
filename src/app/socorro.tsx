@@ -9,6 +9,7 @@ import { useLogActivity } from '@/data/hooks';
 import { exerciseById, EXERCISES, SOS_BY_TRACK } from '@/domain/exercises';
 import { AQUECIMENTO } from '@/domain/spaces';
 import { tap } from '@/lib/haptics';
+import { TrackContextBar } from '@/components/space';
 import { colors, radius, shadow, space } from '@/theme';
 
 /** Botão "Socorro": exercícios guiados para a hora do aperto, sempre grátis. */
@@ -23,6 +24,7 @@ export default function Socorro() {
 
   return (
     <Screen padTop={false}>
+      <TrackContextBar trackId={track ?? AQUECIMENTO} />
       <View style={{ gap: space.xs }}>
         <Txt variant="eyebrow">Socorro</Txt>
         <Txt variant="hero">Respire. Você está seguro aqui.</Txt>

@@ -167,6 +167,7 @@ export default function Perfil() {
       </Card>
 
       <Card style={{ gap: 0 }}>
+        {profile?.role === 'admin' ? <MenuItem icon="settings" label="Administração: cursos, aulas e preços" onPress={() => router.push('/admin')} /> : null}
         <MenuItem icon="repeat" label="Trocar de trilha" onPress={() => router.push('/')} />
         <MenuItem icon="award" label="Níveis de bondade e prêmios" onPress={() => router.push('/bondade')} />
         <MenuItem icon="star" label="Conselheiros" onPress={() => router.push('/conselheiros')} />

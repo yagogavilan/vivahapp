@@ -49,10 +49,11 @@ describe('acesso aos cursos', () => {
     expect(lessonOpen(protocolo[1], 'locked')).toBe(false);
     expect(lessonOpen(preview[0], 'soon')).toBe(false);
   });
-  it('trilha aberta quando tem ao menos um curso liberado', () => {
+  it('trilha aberta só com a assinatura; low ticket não abre a trilha', () => {
     const respira = courses.filter((c) => c.trackId === 'respira');
     expect(trackState(track('respira'), respira, none)).toBe('locked');
-    expect(trackState(track('respira'), respira, new Set(['calma-em-5-minutos']))).toBe('open');
+    expect(trackState(track('respira'), respira, new Set(['calma-em-5-minutos']))).toBe('locked');
+    expect(trackState(track('respira'), respira, new Set(['protocolo-desligando-a-mente']))).toBe('open');
   });
   it('calcula conclusão e próxima aula', () => {
     const ls = lessons.filter((l) => l.courseId === 'kit-descarrega-a-mente');
@@ -60,11 +61,13 @@ describe('acesso aos cursos', () => {
     expect(completion(ls, progress)).toBe(33);
     expect(nextLesson(ls, progress)?.id).toBe(ls[1].id);
   });
-  it('acha o produto do curso e monta o checkout com o e-mail', () => {
-    expect(productForCourse('mente-silenciosa', products)?.id).toBe('mente-silenciosa');
-    const sub = products.find((p) => p.id === 'assinatura-vivah')!;
+  it('curso da trilha é vendido pela assinatura anual; low ticket, sozinho', () => {
+    expect(productForCourse(course('mente-silenciosa'), products)?.id).toBe('trilha-respira');
+    expect(productForCourse(course('calma-em-5-minutos'), products)?.id).toBe('calma-em-5-minutos');
+    const sub = products.find((p) => p.id === 'trilha-respira')!;
     expect(sub.courseIds).toContain('protocolo-desligando-a-mente');
-    expect(sub.courseIds).not.toContain('mente-silenciosa');
+    expect(sub.courseIds).toContain('mente-silenciosa');
+    expect(sub.courseIds).not.toContain('calma-em-5-minutos');
     expect(checkoutLink('https://pay.hotmart.com/ABC123', 'ana@exemplo.com', 'Ana Souza')).toBe(
       'https://pay.hotmart.com/ABC123?email=ana%40exemplo.com&name=Ana+Souza',
     );

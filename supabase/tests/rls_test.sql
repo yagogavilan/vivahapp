@@ -1,7 +1,7 @@
 -- Testes das regras de acesso. Cada bloco falha com mensagem clara se uma regra quebrar.
 \set ON_ERROR_STOP on
 
--- Duas alunas: Ana comprou o Protocolo na Hotmart; Bia só tem a conta grátis.
+-- Duas alunas: Ana assinou a trilha Respira (anual); Bia só tem a conta grátis.
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-00000000000a', 'Ana@Exemplo.com', '{"full_name":"Ana Souza"}'),
   ('00000000-0000-0000-0000-00000000000b', 'bia@exemplo.com', '{}');
@@ -9,7 +9,7 @@ insert into auth.users (id, email, raw_user_meta_data) values
 -- O webhook (service role) libera o acesso pelo e-mail da compra.
 insert into public.entitlements (email, course_id, product_id, hotmart_transaction)
 select 'ana@exemplo.com', pc.course_id, pc.product_id, 'HP123'
-  from public.product_courses pc where pc.product_id = 'protocolo-desligando-a-mente';
+  from public.product_courses pc where pc.product_id = 'trilha-respira';
 
 do $$ begin
   assert (select email from public.profiles where id = '00000000-0000-0000-0000-00000000000a') = 'ana@exemplo.com',
@@ -98,26 +98,116 @@ do $$ declare blocked boolean; begin
 end $$;
 commit;
 
--- ——— Ana (comprou o Protocolo) ———
+-- ——— Ana (assinou a trilha Respira) ———
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a","email":"ana@exemplo.com","role":"authenticated"}';
+do $$ declare blocked boolean; begin
+  assert public.has_course_access('protocolo-desligando-a-mente'), 'Ana deveria ter o Protocolo';
+  assert public.has_course_access('mente-silenciosa'), 'a assinatura da trilha deveria abrir todos os cursos dela';
+  assert not public.has_course_access('calma-em-5-minutos'), 'low ticket é vendido à parte, fora da assinatura';
+  assert not public.has_course_access('roteiro-one-on-one'), 'Ana não deveria ter cursos de outra trilha';
+  assert public.can_access_channel('respira'), 'assinante entra na comunidade da trilha';
+
+  -- Sequência: a aula 2 só abre depois de concluir a aula 1.
+  assert (select count(*) from public.lesson_media where lesson_id = 'protocolo-desligando-a-mente--m1--a1') = 1, 'primeira aula aberta';
+  assert (select count(*) from public.lesson_media where lesson_id = 'protocolo-desligando-a-mente--m1--a2') = 0,
+    'a segunda aula só abre com a primeira concluída';
+  blocked := false;
+  begin insert into public.lesson_progress (lesson_id, completed_at) values ('protocolo-desligando-a-mente--m1--a2', now());
+  exception when others then blocked := true; end;
+  assert blocked, 'não dá para marcar como concluída uma aula fora da ordem';
+  insert into public.lesson_progress (lesson_id, position_sec) values ('protocolo-desligando-a-mente--m1--a1', 30);
+  assert (select count(*) from public.lesson_media where lesson_id = 'protocolo-desligando-a-mente--m1--a2') = 0,
+    'aula começada não basta: precisa concluir';
+  update public.lesson_progress set completed_at = now() where lesson_id = 'protocolo-desligando-a-mente--m1--a1';
+  assert (select count(*) from public.lesson_media where lesson_id = 'protocolo-desligando-a-mente--m1--a2') = 1,
+    'concluída a primeira, a segunda abre';
+  assert (select count(*) from public.lesson_media where lesson_id = 'protocolo-desligando-a-mente--m2--a1') = 0,
+    'a terceira continua fechada';
+  assert (select count(*) from public.lesson_media where lesson_id = 'mente-silenciosa--m1--a1') = 0,
+    'o curso seguinte da trilha só abre depois do anterior';
+  assert public.previous_lesson_in_track('desafio-21-dias--m1--a1') is not null, 'cursos da trilha formam uma sequência só';
+  assert public.previous_lesson_in_track('calma-em-5-minutos--m1--a1') is null, 'low ticket fica fora da sequência';
+
+  assert (select count(*) from public.entitlements) > 1, 'Ana deveria ver os próprios acessos';
+  assert (select count(*) from public.agenda_events) = 0, 'Ana não deveria ver a agenda da Bia';
+  assert (select count(*) from public.lesson_progress where user_id <> auth.uid()) = 0, 'Ana não deveria ver o progresso da Bia';
+  assert (select count(*) from public.activity_log) = 0, 'Ana não deveria ver a atividade da Bia';
+  assert (select count(*) from public.lesson_notes) = 0, 'Ana não deveria ver as anotações da Bia';
+  assert (select count(*) from public.favorites) = 0, 'Ana não deveria ver os favoritos da Bia';
+
+  -- Aluna não escreve no catálogo.
+  update public.courses set title = 'hackeado' where id = 'mente-silenciosa';
+  assert (select title from public.courses where id = 'mente-silenciosa') <> 'hackeado', 'aluna não edita cursos';
+  blocked := false;
+  begin insert into public.modules (id, course_id, title) values ('x', 'mente-silenciosa', 'x'); exception when others then blocked := true; end;
+  assert blocked, 'aluna não cria módulos';
+
+  insert into public.posts (channel, body) values ('respira', 'Terminei o dia 7!');
+  assert (select author_name from public.posts where body = 'Terminei o dia 7!') = 'Ana', 'nome do autor: primeiro nome';
+  assert (select count(*) from public.posts_feed where channel = 'aquecimento') = 1, 'Ana deveria ver o post do aquecimento';
+end $$;
+commit;
+
+-- ——— Low ticket não abre a comunidade nem os cursos da trilha ———
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-00000000000e', 'eva@exemplo.com');
+insert into public.entitlements (email, course_id, product_id) values ('eva@exemplo.com', 'calma-em-5-minutos', 'calma-em-5-minutos');
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000e","email":"eva@exemplo.com","role":"authenticated"}';
+do $$ begin
+  assert public.has_course_access('calma-em-5-minutos'), 'Eva comprou o low ticket';
+  assert (select count(*) from public.lesson_media lm join public.lessons l on l.id = lm.lesson_id where l.course_id = 'calma-em-5-minutos')
+       = (select count(*) from public.lessons where course_id = 'calma-em-5-minutos'), 'low ticket abre todas as aulas, sem sequência';
+  assert not public.has_course_access('mente-silenciosa'), 'low ticket não abre os cursos da trilha';
+  assert not public.can_access_channel('respira'), 'low ticket não abre a comunidade da trilha';
+end $$;
+commit;
+
+-- ——— Admin gerencia cursos, módulos e aulas pelo app ———
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000ad', 'admin@vivah.com.br');
+begin;
+set local request.jwt.claims = '{"role":"service_role"}';
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000ad';
+commit;
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000ad","email":"admin@vivah.com.br","role":"authenticated"}';
+do $$ declare blocked boolean; begin
+  insert into public.courses (id, track_id, title, kind, summary, sort) values ('curso-novo', 'respira', 'Curso novo', 'programa', 'Teste', 999);
+  insert into public.modules (id, course_id, title, sort) values ('curso-novo--m1', 'curso-novo', 'Módulo 1', 1);
+  insert into public.lessons (id, module_id, course_id, title, kind, duration_min, sort)
+    values ('curso-novo--m1--a1', 'curso-novo--m1', 'curso-novo', 'Aula 1', 'video', 10, 1);
+  insert into public.lesson_media (lesson_id, media_url) values ('curso-novo--m1--a1', 'https://exemplo.com/v.mp4');
+  assert exists (select 1 from public.product_courses where product_id = 'trilha-respira' and course_id = 'curso-novo'),
+    'curso novo entra sozinho na assinatura da trilha';
+  insert into public.courses (id, track_id, title, kind, summary, sort, low_ticket, format, price_label)
+    values ('lt-novo', 'respira', 'Planilha nova', 'bonus', 'Teste', 1000, true, 'planilha', 'R$ 19');
+  assert exists (select 1 from public.products where id = 'lt-novo' and active), 'low ticket novo vira produto próprio';
+  assert not exists (select 1 from public.product_courses where product_id = 'trilha-respira' and course_id = 'lt-novo'),
+    'low ticket não entra na assinatura';
+  update public.tracks set price_label = 'R$ 497 por ano' where id = 'respira';
+  update public.products set checkout_url = 'https://pay.exemplo.com/respira' where id = 'trilha-respira';
+  assert (select checkout_url from public.products where id = 'trilha-respira') is not null, 'admin cadastra o link de pagamento';
+  assert public.can_read_lesson('mente-silenciosa--m1--a4'), 'admin abre qualquer aula, sem sequência';
+  blocked := false;
+  begin delete from public.courses where id = 'protocolo-desligando-a-mente'; exception when others then blocked := true; end;
+  assert blocked, 'curso já vendido não pode ser apagado';
+  delete from public.courses where id = 'lt-novo';
+end $$;
+commit;
+
+do $$ begin
+  assert (select price_label from public.tracks where id = 'respira') = 'R$ 497 por ano', 'preço editado pelo admin fica salvo';
+end $$;
+
+-- A Ana, assinante, recebe o curso novo sem comprar de novo.
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a","email":"ana@exemplo.com","role":"authenticated"}';
 do $$ begin
-  assert public.has_course_access('protocolo-desligando-a-mente'), 'Ana deveria ter o Protocolo';
-  assert not public.has_course_access('mente-silenciosa'), 'Ana não deveria ter o Mente Silenciosa';
-  assert (select count(*) from public.lesson_media lm join public.lessons l on l.id = lm.lesson_id
-           where l.course_id = 'protocolo-desligando-a-mente')
-       = (select count(*) from public.lessons where course_id = 'protocolo-desligando-a-mente'),
-    'Ana deveria abrir todas as aulas do Protocolo';
-  assert (select count(*) from public.entitlements) = 1, 'Ana deveria ver o próprio acesso';
-  assert (select count(*) from public.agenda_events) = 0, 'Ana não deveria ver a agenda da Bia';
-  assert (select count(*) from public.lesson_progress) = 0, 'Ana não deveria ver o progresso da Bia';
-  assert (select count(*) from public.activity_log) = 0, 'Ana não deveria ver a atividade da Bia';
-  assert (select count(*) from public.lesson_notes) = 0, 'Ana não deveria ver as anotações da Bia';
-  assert (select count(*) from public.favorites) = 0, 'Ana não deveria ver os favoritos da Bia';
-  insert into public.posts (channel, body) values ('respira', 'Terminei o dia 7!');
-  assert (select author_name from public.posts where body = 'Terminei o dia 7!') = 'Ana', 'nome do autor: primeiro nome';
-  assert (select count(*) from public.posts_feed where channel = 'aquecimento') = 1, 'Ana deveria ver o post do aquecimento';
+  assert public.has_course_access('curso-novo'), 'assinante recebe os cursos novos da trilha';
 end $$;
 commit;
 

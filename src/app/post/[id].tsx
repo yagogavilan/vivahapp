@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { EmergencyCard } from '@/components/care';
 import { CommentItem, Composer, PostCard } from '@/components/community';
 import { SupportSection } from '@/components/support';
+import { TrackContextBar } from '@/components/space';
 import { programFor } from '@/domain/programs';
 import { Empty, Loading, Screen, Txt } from '@/components/ui';
 import { useComments, useCommunityMutations, usePost } from '@/data/hooks';
@@ -21,6 +22,7 @@ export default function PostScreen() {
 
   return (
     <Screen padTop={false} refreshing={comments.isRefetching} onRefresh={() => { post.refetch(); comments.refetch(); }}>
+      <TrackContextBar trackId={p.channel} />
       <PostCard post={p} link={false} />
       <SupportSection post={p} />
       {p.kind === 'apoio' ? <EmergencyCard compact /> : null}

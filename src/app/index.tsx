@@ -1,11 +1,14 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
+import { useState } from 'react';
+import { takeFirstTrack } from '@/lib/first-run';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { SpaceCover, spaceIcon } from '@/components/space';
 import { ErrorState, Icon, Logo, Pill, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn, ScreenSkeleton, useWide } from '@/components/visual';
-import { useLibrary, useProgress } from '@/data/hooks';
+import { useLatestDiagnostic, useLibrary, useProgress } from '@/data/hooks';
+import { MIND_JOURNEY, MOMENTS, type MomentId } from '@/domain/life-test';
 import { completion } from '@/domain/access';
 import type { CourseState } from '@/domain/access';
 import { greeting } from '@/domain/dates';
@@ -21,7 +24,11 @@ export default function EscolherTrilha() {
   const { profile } = useSession();
   const library = useLibrary();
   const progress = useProgress();
+  const diagnostic = useLatestDiagnostic();
   const wide = useWide();
+  // Primeiro acesso: abre direto a trilha escolhida no fim do teste.
+  const [firstTrack] = useState(takeFirstTrack);
+  if (firstTrack) return <Redirect href={{ pathname: '/t/[track]', params: { track: firstTrack } }} />;
 
   if (library.isPending) return <ScreenSkeleton />;
   if (library.error || !library.data) return <ErrorState error={library.error} onRetry={library.refetch} />;
@@ -39,13 +46,18 @@ export default function EscolherTrilha() {
       return { s, state, percent: completion(ls, progress.data ?? []) };
     });
   const mine = entries.filter((e) => e.state === 'open');
-  const others = entries.filter((e) => e.state !== 'open');
+  const recommendedId = diagnostic.data?.recommendedTrackId;
+  const moment = diagnostic.data?.moment ? MOMENTS[diagnostic.data.moment as MomentId] : undefined;
+  // As outras trilhas, na ordem da jornada Vivah (mente → rotina → dinheiro → carreira).
+  const others = entries
+    .filter((e) => e.state !== 'open')
+    .sort((a, b) => MIND_JOURNEY.indexOf(a.s.id) - MIND_JOURNEY.indexOf(b.s.id));
   const aquecimento = spaceFor(AQUECIMENTO, lib.tracks)!;
 
-  const open = (s: Space, state: CourseState) => {
+  // Todas as trilhas abrem; os cursos de quem ainda não assinou ficam bloqueados lá dentro.
+  const open = (s: Space, _state: CourseState) => {
     tap();
-    if (state === 'open') router.push({ pathname: '/t/[track]', params: { track: s.id } });
-    else router.push({ pathname: '/trilha/[id]', params: { id: s.id } });
+    router.push({ pathname: '/t/[track]', params: { track: s.id } });
   };
 
   const aquecimentoCard = (
@@ -77,6 +89,27 @@ export default function EscolherTrilha() {
         <Txt variant="eyebrow">{greeting()}{firstName ? `, ${firstName}` : ''}</Txt>
         <Txt variant="hero">Qual trilha você quer seguir hoje?</Txt>
       </View>
+
+      {moment ? (
+        <Pressable onPress={() => router.push('/diagnostico')} accessibilityRole="button" style={styles.moment}>
+          <Icon name="compass" size={20} color={colors.coralText} />
+          <View style={{ flex: 1 }}>
+            <Txt variant="bodyStrong">{moment.title}</Txt>
+            <Txt variant="small">
+              Indicada para você: {lib.tracks.find((t) => t.id === recommendedId)?.title ?? '—'} · toque para refazer o teste
+            </Txt>
+          </View>
+        </Pressable>
+      ) : (
+        <Pressable onPress={() => router.push('/diagnostico')} accessibilityRole="button" style={styles.moment}>
+          <Icon name="compass" size={20} color={colors.coralText} />
+          <View style={{ flex: 1 }}>
+            <Txt variant="bodyStrong">Descubra o seu momento de vida</Txt>
+            <Txt variant="small">14 perguntas e a gente indica por qual trilha começar.</Txt>
+          </View>
+          <Icon name="chevron-right" size={18} color={colors.textSubtle} />
+        </Pressable>
+      )}
 
       {mine.length ? (
         <View style={{ gap: space.md }}>
@@ -124,20 +157,21 @@ export default function EscolherTrilha() {
 
       <View style={{ gap: space.md }}>
         <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>{mine.length ? 'Outras trilhas' : 'Trilhas Vivah'}</Txt>
+        <Txt variant="small">Entre para conhecer: as ferramentas do dia são abertas; os cursos e a comunidade vêm com a assinatura anual da trilha.</Txt>
         <View style={[styles.lockedGrid, wide && styles.lockedGridWide]}>
           {others.map(({ s, state }) => (
             <Pressable
               key={s.id}
               onPress={() => open(s, state)}
               accessibilityRole="button"
-              accessibilityLabel={`Trilha ${s.title}, ${state === 'soon' ? 'em breve' : 'bloqueada'}`}
-              style={({ pressed }) => [styles.locked, shadow, wide && styles.lockedWide, { opacity: pressed ? 0.85 : 1 }]}>
+              accessibilityLabel={`Trilha ${s.title}, ${state === 'soon' ? 'em breve' : 'cursos para assinantes'}`}
+              style={({ pressed }) => [styles.locked, shadow, wide && styles.lockedWide, s.id === recommendedId && styles.recommended, { opacity: pressed ? 0.85 : 1 }]}>
               <View style={[styles.lockedIcon, { backgroundColor: colors.sand }]}>
                 <Icon name={spaceIcon(s)} size={20} color={colors.textSubtle} />
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Txt variant="bodyStrong">{s.title}</Txt>
-                <Txt variant="small" numberOfLines={1}>{s.track?.areaLabel}</Txt>
+                <Txt variant="small" numberOfLines={1}>{s.id === recommendedId ? 'Indicada para você' : s.track?.areaLabel}</Txt>
               </View>
               {state === 'soon' ? (
                 <Pill label={s.track?.launchLabel ?? 'Em breve'} tone="sand" icon="calendar" />
@@ -178,5 +212,7 @@ const styles = StyleSheet.create({
   },
   lockedWide: { width: '49%' },
   lockedIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  recommended: { borderColor: colors.coral, borderWidth: 2 },
+  moment: { flexDirection: 'row', alignItems: 'center', gap: space.md, backgroundColor: colors.coralSoft, borderRadius: radius.md, padding: space.md },
   lock: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.coralSoft, alignItems: 'center', justifyContent: 'center' },
 });

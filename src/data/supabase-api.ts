@@ -34,6 +34,7 @@ const toProfile = (r: Row): Profile => ({
   healthConsentAt: r.health_consent_at,
   onboardedAt: r.onboarded_at,
   preferences: r.preferences ?? {},
+  role: r.role === 'admin' ? 'admin' : 'aluno',
 });
 
 const toPost = (r: Row): Post => ({
@@ -145,7 +146,7 @@ export const supabaseApi: Api = {
       sb.from('courses').select('*').order('sort'),
       sb.from('modules').select('*').order('sort'),
       sb.from('lessons').select('*').order('sort'),
-      sb.from('products').select('*'),
+      sb.from('products').select('*').eq('active', true),
       sb.from('product_courses').select('*'),
     ]);
     const linkRows = check(links) as Row[];
@@ -162,6 +163,7 @@ export const supabaseApi: Api = {
         status: r.status,
         launchLabel: r.launch_label,
         sort: r.sort,
+        priceLabel: r.price_label ?? null,
       })),
       courses: (check(courses) as Row[]).map((r) => ({
         id: r.id,
@@ -175,6 +177,8 @@ export const supabaseApi: Api = {
         isFree: r.is_free,
         minKindnessLevel: r.min_kindness_level ?? null,
         rewardOnly: Boolean(r.reward_only),
+        lowTicket: Boolean(r.low_ticket),
+        format: r.format ?? null,
       })),
       modules: (check(modules) as Row[]).map((r) => ({ id: r.id, courseId: r.course_id, title: r.title, sort: r.sort })),
       lessons: (check(lessons) as Row[]).map((r) => ({
@@ -517,12 +521,12 @@ export const supabaseApi: Api = {
       await requireSupabase().from('diagnostic_results').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ) as Row | null;
     return r
-      ? { id: r.id, createdAt: r.created_at, answers: r.answers, scores: r.scores, recommendedTrackId: r.recommended_track }
+      ? { id: r.id, createdAt: r.created_at, answers: r.answers, scores: r.scores, recommendedTrackId: r.recommended_track, moment: r.moment ?? null }
       : null;
   },
 
-  async saveDiagnostic(answers, scores: Record<LifeArea, number>, recommendedTrackId) {
-    check(await requireSupabase().from('diagnostic_results').insert({ answers, scores, recommended_track: recommendedTrackId }));
+  async saveDiagnostic(answers, scores: Record<LifeArea, number>, recommendedTrackId, moment) {
+    check(await requireSupabase().from('diagnostic_results').insert({ answers, scores, recommended_track: recommendedTrackId, moment: moment ?? null }));
   },
 
   async getCheckins(days): Promise<Checkin[]> {
@@ -607,5 +611,72 @@ export const supabaseApi: Api = {
     } else {
       check(await sb.from('favorites').delete().eq('item_type', itemType).eq('item_id', itemId));
     }
+  },
+  async adminUpdateTrack(id, patch) {
+    const row: Record<string, unknown> = {};
+    if (patch.priceLabel !== undefined) row.price_label = patch.priceLabel;
+    if (patch.status !== undefined) row.status = patch.status;
+    if (patch.launchLabel !== undefined) row.launch_label = patch.launchLabel;
+    check(await requireSupabase().from('tracks').update(row).eq('id', id));
+  },
+
+  async adminSaveCourse(c) {
+    check(
+      await requireSupabase().from('courses').upsert({
+        id: c.id,
+        track_id: c.trackId,
+        title: c.title,
+        summary: c.summary,
+        kind: c.lowTicket ? 'bonus' : 'programa',
+        low_ticket: c.lowTicket,
+        format: c.lowTicket ? (c.format ?? 'aula') : null,
+        price_label: c.lowTicket ? c.priceLabel : null,
+        sort: c.sort,
+      }),
+    );
+  },
+
+  async adminDeleteCourse(id) {
+    check(await requireSupabase().from('courses').delete().eq('id', id));
+  },
+
+  async adminSaveModule(m) {
+    check(await requireSupabase().from('modules').upsert({ id: m.id, course_id: m.courseId, title: m.title, sort: m.sort }));
+  },
+
+  async adminDeleteModule(id) {
+    check(await requireSupabase().from('modules').delete().eq('id', id));
+  },
+
+  async adminSaveLesson(l) {
+    const sb = requireSupabase();
+    check(
+      await sb.from('lessons').upsert({
+        id: l.id,
+        module_id: l.moduleId,
+        course_id: l.courseId,
+        title: l.title,
+        summary: l.summary,
+        kind: l.kind,
+        duration_min: l.durationMin,
+        sort: l.sort,
+        is_preview: l.isPreview,
+      }),
+    );
+    check(await sb.from('lesson_media').upsert({ lesson_id: l.id, media_url: l.mediaUrl, body: l.body }));
+  },
+
+  async adminDeleteLesson(id) {
+    check(await requireSupabase().from('lessons').delete().eq('id', id));
+  },
+
+  async adminReorder(kind, orderedIds) {
+    const sb = requireSupabase();
+    const results = await Promise.all(orderedIds.map((id, i) => sb.from(kind).update({ sort: i + 1 }).eq('id', id)));
+    results.forEach(check);
+  },
+
+  async adminSetCheckout(productId, checkoutUrl) {
+    check(await requireSupabase().from('products').update({ checkout_url: checkoutUrl }).eq('id', productId));
   },
 };

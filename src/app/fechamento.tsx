@@ -11,6 +11,7 @@ import { addDays, dayKey } from '@/domain/dates';
 import { programFor } from '@/domain/programs';
 import { AQUECIMENTO } from '@/domain/spaces';
 import { success } from '@/lib/haptics';
+import { TrackContextBar } from '@/components/space';
 import { colors, fonts, radius, space } from '@/theme';
 
 /** Fechamento do dia: o teste da trilha, com nota de 0 a 100 e comparação. */
@@ -39,6 +40,7 @@ function ReviewForm({ trackId, plan, initial, history }: { trackId: string; plan
   if (saved !== null) {
     return (
       <Screen padTop={false}>
+      <TrackContextBar trackId={trackId} />
         <FadeIn>
           <View style={styles.result}>
             <Txt variant="eyebrow" style={{ color: colors.coral }}>{program.review.scoreName}</Txt>
@@ -70,6 +72,7 @@ function ReviewForm({ trackId, plan, initial, history }: { trackId: string; plan
 
   return (
     <Screen padTop={false}>
+      <TrackContextBar trackId={trackId} />
       <View style={{ gap: space.xs }}>
         <Txt variant="eyebrow">Fechamento do dia</Txt>
         <Txt variant="hero">{program.review.title}</Txt>

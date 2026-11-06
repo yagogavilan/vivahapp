@@ -5,6 +5,7 @@ import { useSession } from '../auth/session';
 import { courseState, type CourseState } from '../domain/access';
 import { computeStreak } from '../domain/streak';
 import { api } from './index';
+import type { AdminCourseInput, AdminLessonInput, AdminModuleInput, AdminTrackPatch } from './api';
 import { dayKey } from '../domain/dates';
 import type {
   ActivityKind,
@@ -308,8 +309,8 @@ export function useSaveDiagnostic() {
   const qc = useQueryClient();
   const key = useKey('diagnostic');
   return useMutation({
-    mutationFn: (v: { answers: Record<string, number>; scores: Record<LifeArea, number>; trackId: string }) =>
-      api.saveDiagnostic(v.answers, v.scores, v.trackId),
+    mutationFn: (v: { answers: Record<string, number>; scores: Record<LifeArea, number>; trackId: string; moment?: string }) =>
+      api.saveDiagnostic(v.answers, v.scores, v.trackId, v.moment),
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
 }
@@ -403,4 +404,22 @@ export function useToggleFavorite() {
     onError: (_e, _v, ctx) => ctx && qc.setQueryData(key, ctx.prev),
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
+}
+
+/** Página de admin: cada alteração recarrega o catálogo de todo mundo neste aparelho. */
+export function useAdmin() {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ predicate: (q) => q.queryKey.includes('catalog') || q.queryKey.includes('access') || q.queryKey.includes('lesson-media') });
+  const m = <V,>(fn: (v: V) => Promise<void>) => ({ mutationFn: fn, onSuccess: refresh });
+  return {
+    updateTrack: useMutation(m((v: { id: string; patch: AdminTrackPatch }) => api.adminUpdateTrack(v.id, v.patch))),
+    saveCourse: useMutation(m((v: AdminCourseInput) => api.adminSaveCourse(v))),
+    deleteCourse: useMutation(m((id: string) => api.adminDeleteCourse(id))),
+    saveModule: useMutation(m((v: AdminModuleInput) => api.adminSaveModule(v))),
+    deleteModule: useMutation(m((id: string) => api.adminDeleteModule(id))),
+    saveLesson: useMutation(m((v: AdminLessonInput) => api.adminSaveLesson(v))),
+    deleteLesson: useMutation(m((id: string) => api.adminDeleteLesson(id))),
+    reorder: useMutation(m((v: { kind: 'courses' | 'modules' | 'lessons'; ids: string[] }) => api.adminReorder(v.kind, v.ids))),
+    setCheckout: useMutation(m((v: { productId: string; url: string | null }) => api.adminSetCheckout(v.productId, v.url))),
+  };
 }

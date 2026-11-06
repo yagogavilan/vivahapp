@@ -7,7 +7,9 @@ import { Button, Card, Empty, ErrorState, Icon, Loading, Pill, ProgressBar, Row,
 import { TrackCover } from '@/components/visual';
 import { useLibrary, useProgress } from '@/data/hooks';
 import type { Lesson } from '@/data/types';
-import { completion, lessonOpen, nextLesson } from '@/domain/access';
+import { completion, isTrackCourse, lessonOpen, nextLesson } from '@/domain/access';
+import { currentLesson, sequenceInfo, trackSequence } from '@/domain/sequence';
+import { TrackContextBar } from '@/components/space';
 import { colors, space } from '@/theme';
 
 const KIND_ICON = { video: 'play-circle', audio: 'headphones', texto: 'file-text' } as const;
@@ -29,7 +31,14 @@ export default function Curso() {
   const ordered: Lesson[] = mods.flatMap((m) => lib.lessons.filter((l) => l.moduleId === m.id).sort((a, b) => a.sort - b.sort));
   const done = new Set((progress.data ?? []).filter((p) => p.completedAt).map((p) => p.lessonId));
   const percent = completion(ordered, progress.data ?? []);
+  // Sequência obrigatória: a próxima aula da trilha só abre com a anterior concluída.
+  const inSequence = isTrackCourse(course) && state === 'open';
+  const sequence = inSequence ? trackSequence(course.trackId, lib.courses, lib.modules, lib.lessons) : [];
+  const seq = inSequence ? sequenceInfo(sequence, progress.data ?? []) : null;
   const next = nextLesson(ordered, progress.data ?? []);
+  // Próxima aula travada: o botão leva à aula da vez na trilha (a primeira não concluída).
+  const nextLocked = next && seq?.locked.has(next.id) ? (currentLesson(sequence, progress.data ?? []) ?? seq.previous.get(next.id)) : undefined;
+  const blockingCourse = nextLocked ? lib.courses.find((c) => c.id === nextLocked.courseId) : undefined;
   const openLesson = (l: Lesson) => router.push({ pathname: '/aula/[id]', params: { id: l.id } });
   const totalMin = ordered.reduce((sum, l) => sum + l.durationMin, 0);
   const remainingMin = ordered.filter((l) => !done.has(l.id)).reduce((sum, l) => sum + l.durationMin, 0);
@@ -42,10 +51,13 @@ export default function Curso() {
 
   return (
     <Screen padTop={false} refreshing={library.isRefetching} onRefresh={library.refetch}>
+      {track ? <TrackContextBar trackId={track.id} /> : null}
       {track ? (
         <TrackCover area={track.area} muted={state === 'soon'} style={{ padding: space.xl, gap: space.sm }}>
-          <Pressable onPress={() => router.push({ pathname: '/trilha/[id]', params: { id: track.id } })}>
-            <Txt variant="eyebrow" style={{ color: state === 'soon' ? colors.coralText : colors.coral }}>Trilha {track.title}</Txt>
+          <Pressable onPress={() => router.push({ pathname: '/t/[track]/cursos', params: { track: track.id } })}>
+            <Txt variant="eyebrow" style={{ color: state === 'soon' ? colors.coralText : colors.coral }}>
+              {course.lowTicket ? `Low ticket · Trilha ${track.title}` : `Trilha ${track.title}`}
+            </Txt>
           </Pressable>
           <Txt variant="hero" style={{ color: state === 'soon' ? colors.text : colors.onDark }}>{course.title}</Txt>
           <Txt style={{ color: state === 'soon' ? colors.textMuted : colors.onDarkMuted }}>{course.summary}</Txt>
@@ -66,7 +78,17 @@ export default function Curso() {
           </Row>
           <ProgressBar value={percent} />
           {milestone ? <Txt variant="small" style={{ color: colors.coralText }}>{milestone}</Txt> : null}
-          {next ? (
+          {next && nextLocked ? (
+            <View style={{ gap: space.sm }}>
+              <Row gap={6}>
+                <Icon name="lock" size={16} color={colors.textSubtle} />
+                <Txt variant="small" style={{ flex: 1 }}>
+                  As aulas seguem a ordem da trilha. Conclua antes {blockingCourse && blockingCourse.id !== course.id ? `o curso ${blockingCourse.title}` : 'a aula anterior'}.
+                </Txt>
+              </Row>
+              <Button label={blockingCourse && blockingCourse.id !== course.id ? `Continuar em ${blockingCourse.title}` : `Ir para: ${nextLocked.title}`} icon="arrow-right" variant="ghost" onPress={() => openLesson(nextLocked)} />
+            </View>
+          ) : next ? (
             <Button label={percent > 0 ? `Continuar: ${next.title}` : 'Começar'} icon="play" onPress={() => openLesson(next)} />
           ) : (
             <Button label="Ver certificado" icon="award" onPress={() => router.push({ pathname: '/certificado/[id]', params: { id: course.id } })} />
@@ -91,7 +113,8 @@ export default function Curso() {
               .filter((l) => l.moduleId === m.id)
               .sort((a, b) => a.sort - b.sort)
               .map((l, i) => {
-                const canOpen = lessonOpen(l, state);
+                const seqLocked = Boolean(seq?.locked.has(l.id));
+                const canOpen = lessonOpen(l, state) && !seqLocked;
                 return (
                   <Pressable
                     key={l.id}
@@ -107,7 +130,7 @@ export default function Curso() {
                       />
                       <View style={{ flex: 1 }}>
                         <Txt variant="bodyStrong" style={{ color: canOpen ? colors.text : colors.textSubtle }}>{l.title}</Txt>
-                        <Txt variant="small">{l.durationMin} min</Txt>
+                        <Txt variant="small">{seqLocked ? 'Conclua a aula anterior para abrir' : `${l.durationMin} min`}</Txt>
                       </View>
                       {l.isPreview && state === 'locked' ? <Pill label="Aula grátis" tone="mint" /> : null}
                     </Row>

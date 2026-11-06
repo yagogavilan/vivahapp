@@ -6,7 +6,10 @@ import { DEMO_CODE } from '../lib/config';
 import { addDays, dayKey, spDateTime } from '../domain/dates';
 import { buildEscudo, buildLives } from '../domain/schedule';
 import type { Api, SessionUser } from './api';
-import { courses, diagnosticQuestions, lessonMedia, lessons, modules, products, tracks } from './catalog';
+import * as seedCatalog from './catalog';
+import { diagnosticQuestions } from './catalog';
+import { deriveProducts } from '../domain/admin';
+import { sequenceInfo, trackSequence } from '../domain/sequence';
 import { judgeContribution } from '../../supabase/functions/_shared/contribution';
 import { levelFor } from '../domain/kindness';
 import { RULES } from '../domain/points';
@@ -42,7 +45,8 @@ function initialState() {
   return {
     user: null as SessionUser | null,
     profile: null as Profile | null,
-    owned: new Set(['protocolo-desligando-a-mente', 'calma-em-5-minutos']),
+    // Assinante da trilha Respira e dona de um low ticket (Calma em 5 Minutos).
+    owned: new Set([...(seedCatalog.products.find((p) => p.id === 'trilha-respira')?.courseIds ?? []), 'calma-em-5-minutos']),
     progress: [] as LessonProgress[],
     lives: buildLives(addDays(t, -7)),
     escudo: buildEscudo(addDays(t, -6), 7),
@@ -70,6 +74,26 @@ function initialState() {
 }
 
 let state = initialState();
+
+/** Catálogo editável pela página de admin (só nesta sessão de demonstração). */
+const cat = {
+  tracks: seedCatalog.tracks.map((t) => ({ ...t })),
+  courses: seedCatalog.courses.map((c) => ({ ...c })),
+  modules: seedCatalog.modules.map((m) => ({ ...m })),
+  lessons: seedCatalog.lessons.map((l) => ({ ...l })),
+  media: seedCatalog.lessonMedia.map((m) => ({ ...m })),
+  checkouts: {} as Record<string, string | null>,
+};
+
+function requireAdmin() {
+  if (state.profile?.role !== 'admin') throw new Error('Só o time Vivah pode editar o catálogo.');
+}
+
+function upsert<T extends { id: string }>(list: T[], item: T) {
+  const i = list.findIndex((x) => x.id === item.id);
+  if (i >= 0) list[i] = { ...list[i], ...item };
+  else list.push(item);
+}
 const listeners = new Set<(u: SessionUser | null) => void>();
 const emit = () => listeners.forEach((l) => l(state.user));
 
@@ -191,7 +215,7 @@ export const demoApi: Api = {
     const fresh = initialState();
     state = { ...fresh, user: { id: 'demo-user', email: email.trim().toLowerCase() } };
     seedHistory();
-    state.profile = { id: 'demo-user', email: state.user!.email, fullName: null, goal: null, healthConsentAt: null, onboardedAt: null, preferences: { showStreak: true, liveReminders: true, dailyReminder: null } };
+    state.profile = { id: 'demo-user', role: state.user!.email.startsWith('admin') ? 'admin' : 'aluno', email: state.user!.email, fullName: null, goal: null, healthConsentAt: null, onboardedAt: null, preferences: { showStreak: true, liveReminders: true, dailyReminder: null } };
     emit();
   },
   async signOut() {
@@ -238,23 +262,38 @@ export const demoApi: Api = {
 
   async getCatalog() {
     await wait();
-    return { tracks, courses, modules, lessons, products };
+    return {
+      tracks: cat.tracks.map((t) => ({ ...t })),
+      courses: cat.courses.map((c) => ({ ...c })),
+      modules: cat.modules.map((m) => ({ ...m })),
+      lessons: cat.lessons.map((l) => ({ ...l })),
+      products: deriveProducts(cat.tracks, cat.courses, cat.checkouts),
+    };
   },
   async getMyCourseIds() {
     const uid_ = state.user?.id;
-    const maxLevel = uid_ ? Math.max(1, ...tracks.map((t) => levelOf(uid_, t.id)), levelOf(uid_, 'aquecimento')) : 1;
-    const exclusive = courses.filter((c) => c.minKindnessLevel != null && maxLevel >= c.minKindnessLevel).map((c) => c.id);
+    if (state.profile?.role === 'admin') return cat.courses.map((c) => c.id);
+    const maxLevel = uid_ ? Math.max(1, ...cat.tracks.map((t) => levelOf(uid_, t.id)), levelOf(uid_, 'aquecimento')) : 1;
+    const subscribed = new Set(cat.courses.filter((c) => state.owned.has(c.id) && !c.lowTicket).map((c) => c.trackId));
+    const trackCourses = cat.courses.filter((c) => subscribed.has(c.trackId) && !c.lowTicket && !c.rewardOnly && c.minKindnessLevel == null).map((c) => c.id);
+    const exclusive = cat.courses.filter((c) => c.minKindnessLevel != null && maxLevel >= c.minKindnessLevel).map((c) => c.id);
     const redeemed = state.redemptions
       .filter((r) => r.status !== 'cancelado')
       .map((r) => TRACK_REWARDS.find((x) => x.id === r.rewardId)?.courseId)
       .filter((x): x is string => Boolean(x));
-    return [...courses.filter((c) => c.isFree).map((c) => c.id), ...state.owned, ...exclusive, ...redeemed];
+    return [...new Set([...cat.courses.filter((c) => c.isFree).map((c) => c.id), ...state.owned, ...trackCourses, ...exclusive, ...redeemed])];
   },
   async getLessonMedia(lessonId) {
-    const lesson = lessons.find((l) => l.id === lessonId);
+    const lesson = cat.lessons.find((l) => l.id === lessonId);
     if (!lesson) return null;
     if (!lesson.isPreview && !(await demoApi.getMyCourseIds()).includes(lesson.courseId)) return null;
-    return lessonMedia.find((m) => m.lessonId === lessonId) ?? null;
+    // Mesma regra do banco: a aula só abre com a anterior da trilha concluída.
+    const course = cat.courses.find((c) => c.id === lesson.courseId);
+    if (course && state.profile?.role !== 'admin') {
+      const seq = sequenceInfo(trackSequence(course.trackId, cat.courses, cat.modules, cat.lessons), state.progress);
+      if (seq.locked.has(lessonId)) return null;
+    }
+    return cat.media.find((m) => m.lessonId === lessonId) ?? null;
   },
   async getProgress() {
     return [...state.progress];
@@ -563,8 +602,8 @@ export const demoApi: Api = {
   async getLatestDiagnostic() {
     return state.diagnostic;
   },
-  async saveDiagnostic(answers, scores, recommendedTrackId) {
-    state.diagnostic = { id: uid(), createdAt: new Date().toISOString(), answers, scores, recommendedTrackId };
+  async saveDiagnostic(answers, scores, recommendedTrackId, moment) {
+    state.diagnostic = { id: uid(), createdAt: new Date().toISOString(), answers, scores, recommendedTrackId, moment: moment ?? null };
   },
 
   async getCheckins(days) {
@@ -597,5 +636,75 @@ export const demoApi: Api = {
   async setFavorite(itemType, itemId, on) {
     state.favorites = state.favorites.filter((f) => !(f.itemType === itemType && f.itemId === itemId));
     if (on) state.favorites = [{ itemType, itemId, createdAt: new Date().toISOString() }, ...state.favorites];
+  },
+  async adminUpdateTrack(id, patch) {
+    requireAdmin();
+    await wait();
+    const t = cat.tracks.find((x) => x.id === id);
+    if (t) Object.assign(t, patch);
+  },
+  async adminSaveCourse(c) {
+    requireAdmin();
+    await wait();
+    const existing = cat.courses.find((x) => x.id === c.id);
+    upsert(cat.courses, {
+      ...(existing ?? { inSubscription: false, isFree: false, minKindnessLevel: null, rewardOnly: false }),
+      id: c.id,
+      trackId: c.trackId,
+      title: c.title,
+      summary: c.summary,
+      kind: c.lowTicket ? 'bonus' : 'programa',
+      lowTicket: c.lowTicket,
+      format: c.lowTicket ? (c.format ?? 'aula') : null,
+      priceLabel: c.lowTicket ? c.priceLabel : null,
+      sort: c.sort,
+    });
+  },
+  async adminDeleteCourse(id) {
+    requireAdmin();
+    await wait();
+    if (state.owned.has(id)) throw new Error('Este curso já tem alunos com acesso. Em vez de apagar, mude o título ou mova as aulas.');
+    cat.courses = cat.courses.filter((c) => c.id !== id);
+    cat.modules = cat.modules.filter((m) => m.courseId !== id);
+    cat.lessons = cat.lessons.filter((l) => l.courseId !== id);
+  },
+  async adminSaveModule(m) {
+    requireAdmin();
+    await wait();
+    upsert(cat.modules, { ...m });
+  },
+  async adminDeleteModule(id) {
+    requireAdmin();
+    await wait();
+    cat.modules = cat.modules.filter((m) => m.id !== id);
+    cat.lessons = cat.lessons.filter((l) => l.moduleId !== id);
+  },
+  async adminSaveLesson(l) {
+    requireAdmin();
+    await wait();
+    const { mediaUrl, body, ...lesson } = l;
+    upsert(cat.lessons, lesson);
+    const media = cat.media.find((m) => m.lessonId === l.id);
+    if (media) Object.assign(media, { mediaUrl, body });
+    else cat.media.push({ lessonId: l.id, mediaUrl, body });
+  },
+  async adminDeleteLesson(id) {
+    requireAdmin();
+    await wait();
+    cat.lessons = cat.lessons.filter((l) => l.id !== id);
+  },
+  async adminReorder(kind, orderedIds) {
+    requireAdmin();
+    await wait();
+    const list: { id: string; sort: number }[] = kind === 'courses' ? cat.courses : kind === 'modules' ? cat.modules : cat.lessons;
+    orderedIds.forEach((id, i) => {
+      const item = list.find((x) => x.id === id);
+      if (item) item.sort = i + 1;
+    });
+  },
+  async adminSetCheckout(productId, checkoutUrl) {
+    requireAdmin();
+    await wait();
+    cat.checkouts[productId] = checkoutUrl;
   },
 };

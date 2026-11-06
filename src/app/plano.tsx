@@ -10,6 +10,7 @@ import { dayKey } from '@/domain/dates';
 import { programFor } from '@/domain/programs';
 import { AQUECIMENTO } from '@/domain/spaces';
 import { success } from '@/lib/haptics';
+import { TrackContextBar } from '@/components/space';
 import { colors, space } from '@/theme';
 
 /** Plano do dia da trilha, com a validação acontecendo enquanto a pessoa preenche. */
@@ -32,6 +33,7 @@ function PlanForm({ trackId, initial }: { trackId: string; initial?: DailyLog })
 
   return (
     <Screen padTop={false}>
+      <TrackContextBar trackId={trackId} />
       <View style={{ gap: space.xs }}>
         <Txt variant="eyebrow">Plano do dia</Txt>
         <Txt variant="hero">{program.plan.title}</Txt>

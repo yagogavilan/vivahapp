@@ -10,6 +10,7 @@ import { FEELING_ORDER, FEELINGS } from '@/domain/checkin-protocol';
 import { programFor } from '@/domain/programs';
 import { AQUECIMENTO } from '@/domain/spaces';
 import { success, tap } from '@/lib/haptics';
+import { TrackContextBar } from '@/components/space';
 import { colors, radius, space } from '@/theme';
 
 const PLACEHOLDER: Record<PostKind, string> = {
@@ -34,6 +35,7 @@ export default function Publicar() {
 
   return (
     <Screen padTop={false}>
+      <TrackContextBar trackId={track} />
       <Txt variant="hero">Nova publicação</Txt>
 
       <View style={{ gap: space.sm }}>

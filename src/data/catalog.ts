@@ -14,6 +14,7 @@ import type {
   LessonKind,
   LessonMedia,
   LifeArea,
+  LowTicketFormat,
   Module,
   Product,
   Track,
@@ -29,6 +30,9 @@ export const AREA_LABEL: Record<LifeArea, string> = {
   alimentacao: 'Alimentação',
 };
 
+/** Preço de exemplo da assinatura anual de cada trilha: ajuste na página de admin. */
+const TRACK_PRICE = 'R$ 397 por ano';
+
 export const tracks: Track[] = [
   {
     id: 'respira',
@@ -43,6 +47,7 @@ export const tracks: Track[] = [
     status: 'live',
     launchLabel: 'Disponível',
     sort: 1,
+    priceLabel: TRACK_PRICE,
   },
   {
     id: 'ritmo',
@@ -57,6 +62,7 @@ export const tracks: Track[] = [
     status: 'soon',
     launchLabel: 'Fevereiro de 2027',
     sort: 2,
+    priceLabel: TRACK_PRICE,
   },
   {
     id: 'eleva',
@@ -71,6 +77,7 @@ export const tracks: Track[] = [
     status: 'soon',
     launchLabel: 'Fevereiro de 2027',
     sort: 3,
+    priceLabel: TRACK_PRICE,
   },
   {
     id: 'prospera',
@@ -85,6 +92,7 @@ export const tracks: Track[] = [
     status: 'soon',
     launchLabel: 'Abril de 2027',
     sort: 4,
+    priceLabel: TRACK_PRICE,
   },
   {
     id: 'move',
@@ -99,6 +107,7 @@ export const tracks: Track[] = [
     status: 'soon',
     launchLabel: 'Abril de 2027',
     sort: 5,
+    priceLabel: TRACK_PRICE,
   },
   {
     id: 'nutre',
@@ -113,6 +122,7 @@ export const tracks: Track[] = [
     status: 'soon',
     launchLabel: 'Junho de 2027',
     sort: 6,
+    priceLabel: TRACK_PRICE,
   },
 ];
 
@@ -138,7 +148,14 @@ const c = (
   price: number | null,
   summary: string,
   modules: CourseSeed['modules'],
-  opts: { inSubscription?: boolean; isFree?: boolean; priceLabel?: string; minKindnessLevel?: number; rewardOnly?: boolean } = {},
+  opts: {
+    inSubscription?: boolean;
+    isFree?: boolean;
+    priceLabel?: string;
+    minKindnessLevel?: number;
+    rewardOnly?: boolean;
+    lowTicket?: LowTicketFormat;
+  } = {},
 ): CourseSeed => ({
   id,
   trackId,
@@ -146,11 +163,14 @@ const c = (
   kind,
   price,
   summary,
-  priceLabel: opts.priceLabel ?? (price == null ? null : formatBRL(price)),
+  // Curso da trilha entra na assinatura anual; só o low ticket tem preço próprio.
+  priceLabel: opts.lowTicket ? opts.priceLabel ?? (price == null ? null : formatBRL(price)) : null,
   inSubscription: opts.inSubscription ?? false,
   isFree: opts.isFree ?? false,
   minKindnessLevel: opts.minKindnessLevel ?? null,
   rewardOnly: opts.rewardOnly ?? false,
+  lowTicket: Boolean(opts.lowTicket),
+  format: opts.lowTicket ?? null,
   modules,
 });
 
@@ -201,13 +221,13 @@ const courseSeeds: CourseSeed[] = [
       ['Quando acordo de madrugada', 'audio', 5], ['No trânsito', 'audio', 5], ['Depois de uma discussão', 'audio', 5],
       ['Antes de uma prova ou entrevista', 'audio', 5], ['Voltar para o corpo', 'audio', 5],
     ] }],
-    { inSubscription: true, priceLabel: 'R$ 27 no checkout · R$ 37 avulso' }),
+    { lowTicket: 'aula' }),
   c('respira', 'kit-descarrega-a-mente', 'Kit Descarrega a Mente', 'bonus', 19,
     'Diário de ruminação, mapa de gatilhos e planner do horário da preocupação, para imprimir ou preencher.',
     [{ title: 'Materiais', lessons: [
       ['Como usar o kit', 'texto', 3], ['Diário de ruminação', 'texto', 2], ['Mapa de gatilhos', 'texto', 2],
     ] }],
-    { inSubscription: true }),
+    { lowTicket: 'planilha' }),
   c('respira', 'desafio-21-dias', 'Desafio 21 Dias de Mente Quieta', 'entrada', 67,
     'Um áudio de 10 minutos por dia, durante 21 dias, para instalar o hábito com a comunidade.',
     [{ title: 'Os 21 dias', lessons: Array.from({ length: 21 }, (_, i) =>
@@ -219,10 +239,6 @@ const courseSeeds: CourseSeed[] = [
   c('respira', 'terra-firme', 'Terra Firme', 'programa', 997,
     'Continuação do Mente Silenciosa: 8 semanas, 16 aulas, quatro encontros ao vivo e trilha de hábitos.',
     emProducao(['Boas-vindas', 'Fundamentos da terra firme', 'Relações e limites', 'Plano de manutenção'])),
-  c('respira', 'circulo-vivah', 'Círculo Vivah', 'acompanhamento', 2997,
-    'Encontros semanais em grupo com o Edmilson, masterclass mensal e grupo fechado, por um ano.',
-    emProducao(['Como funciona o Círculo', 'Gravações dos encontros']),
-    { priceLabel: 'R$ 2.997 por ano' }),
   // ——— Ritmo (tempo) ———
   c('ritmo', 'semana-organizada', 'Semana Organizada em 7 Dias', 'entrada', 37,
     'Método de prioridades e planner digital para organizar a semana em sete dias.',
@@ -233,7 +249,7 @@ const courseSeeds: CourseSeed[] = [
   // ——— Eleva (carreira) ———
   c('eleva', 'checklist-cs-que-retem', 'Checklist CS que Retém', 'entrada', 27,
     'Checklists práticos de onboarding, acompanhamento e renovação para reter clientes.',
-    emProducao(['Onboarding que ativa', 'Sinais de risco', 'Renovação e expansão']), { inSubscription: true }),
+    emProducao(['Onboarding que ativa', 'Sinais de risco', 'Renovação e expansão']), { lowTicket: 'planilha' }),
   c('eleva', 'carreira-em-ordem', 'Carreira em Ordem', 'entrada', 47,
     'Um plano de 90 dias para organizar a carreira e o próximo passo.',
     emProducao(['Onde você está', 'Onde quer chegar', 'Plano de 90 dias']), { inSubscription: true }),
@@ -243,9 +259,6 @@ const courseSeeds: CourseSeed[] = [
   c('eleva', 'carreira-em-alta', 'Carreira em Alta', 'programa', 997,
     'Posicionamento, comunicação e liderança para crescer no trabalho.',
     emProducao(['Posicionamento', 'Comunicação que convence', 'Primeira liderança'])),
-  c('eleva', 'mentoria-carreira', 'Mentoria Carreira Vivah', 'acompanhamento', 2997,
-    'Mentoria em grupo com plano individual de carreira.',
-    emProducao(['Como funciona a mentoria'])),
   // ——— Prospera (finanças) ———
   c('prospera', 'mes-no-azul', 'Mês no Azul em 30 Dias', 'entrada', 47,
     'Aulas curtas e planilha de orçamento para fechar o mês no azul.',
@@ -253,9 +266,6 @@ const courseSeeds: CourseSeed[] = [
   c('prospera', 'dinheiro-em-ordem', 'Dinheiro em Ordem', 'programa', 697,
     'Oito semanas: orçamento, dívidas, reserva e primeiros investimentos.',
     emProducao(['Diagnóstico financeiro', 'Plano para as dívidas', 'Reserva de emergência', 'Classes de investimento'])),
-  c('prospera', 'circulo-prospera', 'Círculo Prospera', 'acompanhamento', 1497,
-    'Encontro mensal em grupo para revisar metas e números.',
-    emProducao(['Como funciona o Círculo']), { priceLabel: 'R$ 1.497 por ano' }),
   // ——— Move (corpo) ———
   c('move', 'corpo-em-movimento', 'Corpo em Movimento em 21 Dias', 'entrada', 47,
     'Treinos de 15 minutos em casa, em três níveis.',
@@ -263,9 +273,6 @@ const courseSeeds: CourseSeed[] = [
   c('move', 'treino-em-casa-12-semanas', 'Treino em Casa 12 Semanas', 'programa', 497,
     'Programa progressivo de 12 semanas montado pelo educador físico.',
     emProducao(['Fase 1: base', 'Fase 2: força', 'Fase 3: resistência'])),
-  c('move', 'acompanhamento-move', 'Acompanhamento Move', 'acompanhamento', 1997,
-    'Seis meses com avaliação e ajuste mensal do treino pelo educador físico.',
-    emProducao(['Como funciona o acompanhamento'])),
   // ——— Nutre (alimentação) ———
   c('nutre', 'cardapio-da-semana', 'Cardápio da Semana em 7 Dias', 'entrada', 37,
     'Receitas simples e lista de compras pronta para a semana.',
@@ -273,9 +280,31 @@ const courseSeeds: CourseSeed[] = [
   c('nutre', 'reeducacao-alimentar', 'Reeducação Alimentar 8 Semanas', 'programa', 597,
     'Hábitos, rotina de refeições e compras, sem dieta da moda.',
     emProducao(['Fome e saciedade', 'Rotina de refeições', 'Comer fora', 'Manutenção'])),
-  c('nutre', 'nutre-individual', 'Nutre Individual', 'acompanhamento', 1497,
-    'Consulta e plano alimentar individual com nutricionista, com dois retornos.',
-    emProducao(['Como funciona o acompanhamento'])),
+  // ——— Low tickets: mini produtos vendidos à parte em cada trilha ———
+  c('respira', 'diario-do-sono', 'Diário do Sono', 'bonus', 17,
+    'Planilha de 30 dias para entender o seu sono e o que atrapalha a noite.',
+    [{ title: 'Material', lessons: [['Como usar o diário', 'texto', 3], ['Planilha do sono', 'texto', 2]] }], { lowTicket: 'planilha' }),
+  c('ritmo', 'planner-semana-organizada', 'Planner Semana Organizada', 'bonus', 27,
+    'Planilha para planejar a semana em 15 minutos, com prioridades e blocos de foco.',
+    [{ title: 'Material', lessons: [['Como usar o planner', 'video', 6], ['Planner', 'texto', 2]] }], { lowTicket: 'planilha' }),
+  c('ritmo', 'matriz-de-prioridades', 'Matriz de Prioridades', 'bonus', 17,
+    'Ferramenta para separar o urgente do importante em 5 minutos.',
+    [{ title: 'Ferramenta', lessons: [['Como usar a matriz', 'video', 5], ['Matriz para preencher', 'texto', 2]] }], { lowTicket: 'ferramenta' }),
+  c('eleva', 'roteiro-one-on-one', 'Roteiro de 1:1 com o Líder', 'bonus', 17,
+    'Perguntas e pauta para a conversa individual que faz a carreira andar.',
+    [{ title: 'Ferramenta', lessons: [['Como conduzir o 1:1', 'video', 8], ['Roteiro', 'texto', 2]] }], { lowTicket: 'ferramenta' }),
+  c('prospera', 'planilha-orcamento', 'Planilha de Orçamento 50-30-20', 'bonus', 27,
+    'Orçamento pronto: necessidades, desejos e futuro, com gráfico do mês.',
+    [{ title: 'Material', lessons: [['Como usar a planilha', 'video', 7], ['Planilha', 'texto', 2]] }], { lowTicket: 'planilha' }),
+  c('prospera', 'calculadora-de-dividas', 'Calculadora de Dívidas', 'bonus', 19,
+    'Descubra a ordem certa para quitar as dívidas e quando você fica livre.',
+    [{ title: 'Ferramenta', lessons: [['Como usar a calculadora', 'video', 6], ['Calculadora', 'texto', 2]] }], { lowTicket: 'ferramenta' }),
+  c('move', 'treinos-de-15-minutos', 'Treinos de 15 Minutos', 'bonus', 27,
+    'Cinco aulas curtas para treinar em casa quando o dia aperta.',
+    [{ title: 'Aulas', lessons: [1, 2, 3, 4, 5].map((n) => [`Treino ${n}`, 'video', 15] as [string, LessonKind, number]) }], { lowTicket: 'aula' }),
+  c('nutre', 'lista-de-compras', 'Lista de Compras Inteligente', 'bonus', 17,
+    'Planilha da semana com comida de verdade, que economiza tempo e dinheiro.',
+    [{ title: 'Material', lessons: [['Como usar a lista', 'video', 5], ['Lista', 'texto', 2]] }], { lowTicket: 'planilha' }),
   // ——— Formação de Conselheiro: abre no nível Farol (em qualquer trilha) ———
   c('respira', 'formacao-conselheiro', 'Formação de Conselheiro', 'bonus', null,
     'Obrigatória antes de abrir o espaço de conselheiro: papel, limites e código de conduta.',
@@ -326,25 +355,23 @@ for (const course of courseSeeds) {
   });
 }
 
-/** Produtos da Hotmart. Preencha `hotmartProductId` e `checkoutUrl` no painel do Supabase. */
+/**
+ * Produtos: a assinatura anual de cada trilha (todos os cursos da trilha) e
+ * cada low ticket vendido à parte. O link de pagamento de cada um é cadastrado
+ * na página de admin (ou no painel do Supabase).
+ */
 export const products: Product[] = [
-  ...sellable().map((course) => ({
-    id: course.id,
-    name: course.title,
+  ...tracks.map((t) => ({
+    id: `trilha-${t.id}`,
+    name: `Trilha ${t.title} · anual`,
     hotmartProductId: null,
     checkoutUrl: null,
-    courseIds: [course.id],
+    courseIds: sellable().filter((x) => x.trackId === t.id && !x.lowTicket).map((x) => x.id),
   })),
-  {
-    id: 'assinatura-vivah',
-    name: 'Assinatura Vivah',
-    hotmartProductId: null,
-    checkoutUrl: null,
-    courseIds: sellable().filter((x) => x.inSubscription).map((x) => x.id),
-  },
+  ...sellable()
+    .filter((x) => x.lowTicket)
+    .map((course) => ({ id: course.id, name: course.title, hotmartProductId: null, checkoutUrl: null, courseIds: [course.id] })),
 ];
-
-export const SUBSCRIPTION_PRICE_LABEL = 'R$ 39,90 por mês';
 
 /** Temas das lives semanais (quarta, 20h). Dezembro e janeiro: só a trilha Mente. */
 export const liveThemes: { title: string; description: string; trackId: string }[] = [

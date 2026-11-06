@@ -8,7 +8,9 @@ import { LevelBadge } from '@/components/feeling';
 import { SpaceHeader } from '@/components/space';
 import { Empty, ErrorState, Icon, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn, ScreenSkeleton } from '@/components/visual';
-import { usePointsSummary, usePosts, useTodayCheckin } from '@/data/hooks';
+import { useLibrary, usePointsSummary, usePosts, useTodayCheckin } from '@/data/hooks';
+import { AQUECIMENTO, spaceAccess } from '@/domain/spaces';
+import { TrackSubscribePanel } from '@/components/locked-panel';
 import type { Feeling, Post } from '@/data/types';
 import { FEELING_ORDER, FEELINGS } from '@/domain/checkin-protocol';
 import { progressToNext } from '@/domain/kindness';
@@ -52,12 +54,30 @@ export default function Comunidade() {
   const sp = useSpace();
   const { profile } = useSession();
   const posts = usePosts(sp.channel);
+  const library = useLibrary();
   const kindness = usePointsSummary(sp.id);
   const { feelingToday } = useTodayCheckin(sp.id);
   const [filter, setFilter] = useState<Filter>('todos');
   const [feeling, setFeeling] = useState<Feeling | null>(null);
 
-  if (posts.isPending) return <ScreenSkeleton />;
+  if (posts.isPending || library.isPending) return <ScreenSkeleton />;
+  const subscribed = sp.id === AQUECIMENTO || (library.data ? spaceAccess(sp.id, library.data.tracks, library.data.courses, library.data.access) === 'open' : false);
+  if (!subscribed && sp.track) {
+    return (
+      <Screen>
+        <SpaceHeader space={sp} />
+        <View style={{ gap: 4 }}>
+          <Txt variant="eyebrow">Comunidade {sp.title}</Txt>
+          <Txt variant="hero">Uma comunidade só de quem assina a trilha</Txt>
+          <Txt>Aqui as pessoas pedem apoio, contam conquistas, trocam dicas e ganham pontos de bondade. Enquanto isso, a comunidade da Área de Aquecimento é aberta para todos.</Txt>
+        </View>
+        <TrackSubscribePanel track={sp.track} reason="A assinatura anual libera a comunidade, os cursos em sequência e o espaço de conselheiros da trilha." />
+        <Pressable onPress={() => router.push({ pathname: '/t/[track]/comunidade', params: { track: AQUECIMENTO } })} accessibilityRole="button">
+          <Txt variant="small" style={{ textDecorationLine: 'underline' }}>Ir para a comunidade aberta da Área de Aquecimento</Txt>
+        </Pressable>
+      </Screen>
+    );
+  }
   if (posts.error) return <ErrorState error={posts.error} onRetry={posts.refetch} />;
 
   const list = applyFilter(posts.data ?? [], filter, feeling);

@@ -25,7 +25,9 @@ import type {
   DiagnosticResult,
   EscudoAudio,
   Lesson,
+  LessonKind,
   LessonMedia,
+  LowTicketFormat,
   LessonProgress,
   LifeArea,
   Live,
@@ -48,6 +50,41 @@ export interface Catalog {
   lessons: Lesson[];
   products: Product[];
 }
+
+/** Curso como o admin edita (o id é gerado no app a partir do título). */
+export interface AdminCourseInput {
+  id: string;
+  trackId: string;
+  title: string;
+  summary: string;
+  lowTicket: boolean;
+  format: LowTicketFormat | null;
+  priceLabel: string | null;
+  sort: number;
+}
+
+export interface AdminModuleInput {
+  id: string;
+  courseId: string;
+  title: string;
+  sort: number;
+}
+
+export interface AdminLessonInput {
+  id: string;
+  moduleId: string;
+  courseId: string;
+  title: string;
+  summary: string;
+  kind: LessonKind;
+  durationMin: number;
+  sort: number;
+  isPreview: boolean;
+  mediaUrl: string | null;
+  body: string | null;
+}
+
+export type AdminTrackPatch = Partial<Pick<Track, 'priceLabel' | 'status' | 'launchLabel'>>;
 
 export type ProfilePatch = Partial<Pick<Profile, 'fullName' | 'goal' | 'healthConsentAt' | 'onboardedAt' | 'preferences'>>;
 
@@ -117,7 +154,7 @@ export interface Api {
 
   getDiagnosticQuestions(): Promise<DiagnosticQuestion[]>;
   getLatestDiagnostic(): Promise<DiagnosticResult | null>;
-  saveDiagnostic(answers: Record<string, number>, scores: Record<LifeArea, number>, recommendedTrackId: string): Promise<void>;
+  saveDiagnostic(answers: Record<string, number>, scores: Record<LifeArea, number>, recommendedTrackId: string, moment?: string): Promise<void>;
 
   getCheckins(days: number): Promise<Checkin[]>;
   saveCheckin(checkin: Checkin): Promise<void>;
@@ -132,4 +169,17 @@ export interface Api {
 
   getFavorites(): Promise<Favorite[]>;
   setFavorite(itemType: Favorite['itemType'], itemId: string, on: boolean): Promise<void>;
+
+  // Página de admin (o banco só aceita de quem tem role admin).
+  adminUpdateTrack(id: string, patch: AdminTrackPatch): Promise<void>;
+  adminSaveCourse(course: AdminCourseInput): Promise<void>;
+  adminDeleteCourse(id: string): Promise<void>;
+  adminSaveModule(mod: AdminModuleInput): Promise<void>;
+  adminDeleteModule(id: string): Promise<void>;
+  adminSaveLesson(lesson: AdminLessonInput): Promise<void>;
+  adminDeleteLesson(id: string): Promise<void>;
+  /** Grava a nova ordem (sort = posição na lista). */
+  adminReorder(kind: 'courses' | 'modules' | 'lessons', orderedIds: string[]): Promise<void>;
+  /** Link de pagamento do produto (assinatura da trilha ou low ticket). */
+  adminSetCheckout(productId: string, checkoutUrl: string | null): Promise<void>;
 }

@@ -11,6 +11,7 @@ import { FadeIn } from '@/components/visual';
 import { useAdviceRequests, useCounselors, usePointsSummary } from '@/data/hooks';
 import { AQUECIMENTO } from '@/domain/spaces';
 import { COUNSELOR_LEVEL, levelInfo } from '@/domain/kindness';
+import { TrackContextBar } from '@/components/space';
 import { colors, radius, space } from '@/theme';
 
 
@@ -28,6 +29,7 @@ export default function Conselheiros() {
 
   return (
     <Screen padTop={false} refreshing={counselors.isRefetching} onRefresh={() => { counselors.refetch(); requests.refetch(); }}>
+      <TrackContextBar trackId={track} />
       <View style={{ gap: space.xs }}>
         <Txt variant="eyebrow">Conselheiros Vivah</Txt>
         <Txt variant="hero">Converse com quem já passou por isso</Txt>

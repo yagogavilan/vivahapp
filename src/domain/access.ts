@@ -20,13 +20,18 @@ export function lessonOpen(lesson: Lesson, state: CourseState): boolean {
   return state === 'locked' && lesson.isPreview;
 }
 
+/** Curso da sequência da trilha (entra na assinatura anual). */
+export function isTrackCourse(c: Course): boolean {
+  return !c.lowTicket && !c.rewardOnly && c.minKindnessLevel == null;
+}
+
 /**
- * Estado da trilha: aberta se o aluno comprou algum curso dela.
- * Curso grátis e curso exclusivo de bondade não abrem a trilha.
+ * Estado da assinatura da trilha: 'open' se o aluno assinou (tem os cursos da
+ * trilha). Low ticket, curso grátis e exclusivo de bondade não contam.
  */
 export function trackState(track: Track, trackCourses: Course[], access: ReadonlySet<string>): CourseState {
   if (track.status === 'soon') return 'soon';
-  return trackCourses.some((c) => !c.isFree && c.minKindnessLevel == null && !c.rewardOnly && access.has(c.id)) ? 'open' : 'locked';
+  return trackCourses.some((c) => !c.isFree && isTrackCourse(c) && access.has(c.id)) ? 'open' : 'locked';
 }
 
 /** Percentual de aulas concluídas, 0–100. */
@@ -43,12 +48,13 @@ export function nextLesson(ordered: Lesson[], progress: LessonProgress[]): Lesso
   return ordered.find((l) => !done.has(l.id));
 }
 
-/** Produto que vende o curso sozinho (o checkout da vitrine aponta para ele). */
-export function productForCourse(courseId: string, products: Product[]): Product | undefined {
-  return (
-    products.find((p) => p.courseIds.length === 1 && p.courseIds[0] === courseId) ??
-    products.find((p) => p.courseIds.includes(courseId))
-  );
+/**
+ * Produto que libera o curso: o próprio low ticket ou a assinatura anual da
+ * trilha (produto `trilha-<id>`).
+ */
+export function productForCourse(course: Pick<Course, 'id' | 'trackId' | 'lowTicket'>, products: Product[]): Product | undefined {
+  if (course.lowTicket) return products.find((p) => p.id === course.id) ?? products.find((p) => p.courseIds.includes(course.id));
+  return products.find((p) => p.id === `trilha-${course.trackId}`) ?? products.find((p) => p.courseIds.includes(course.id));
 }
 
 /**

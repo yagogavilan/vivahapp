@@ -32,7 +32,7 @@ const lit = (v: unknown): string => {
   return `'${String(v).replace(/'/g, "''")}'`;
 };
 
-function insert(table: string, rows: Record<string, unknown>[], conflict = 'id'): string {
+function insert(table: string, rows: Record<string, unknown>[], conflict = 'id', keep = false): string {
   if (rows.length === 0) return '';
   const cols = Object.keys(rows[0]);
   const values = rows.map((r) => `  (${cols.map((c) => lit(r[c])).join(', ')})`).join(',\n');
@@ -40,42 +40,46 @@ function insert(table: string, rows: Record<string, unknown>[], conflict = 'id')
     .filter((c) => !conflict.split(',').map((x) => x.trim()).includes(c))
     .map((c) => `${c} = excluded.${c}`)
     .join(', ');
-  const onConflict = updates ? `do update set ${updates}` : 'do nothing';
+  const onConflict = updates && !keep ? `do update set ${updates}` : 'do nothing';
   return `insert into public.${table} (${cols.join(', ')}) values\n${values}\non conflict (${conflict}) ${onConflict};\n`;
 }
 
 const sql = [
   '-- Gerado por scripts/generate-seed.ts a partir de src/data/catalog.ts. Não edite à mão.',
-  '-- Pode rodar de novo: atualiza o catálogo sem apagar compras, progresso ou posts.',
+  '-- Pode rodar de novo. Trilhas, cursos, módulos e aulas: só cria o que falta, para não',
+  '-- desfazer o que o admin editou no app. Níveis, recompensas, lives e Escudo: atualiza.',
   '',
   insert('tracks', tracks.map((t) => ({
     id: t.id, title: t.title, area: t.area, area_label: t.areaLabel, subtitle: t.subtitle,
     description: t.description, promise: t.promise, teacher: t.teacher, status: t.status,
-    launch_label: t.launchLabel, sort: t.sort,
-  }))),
+    launch_label: t.launchLabel, sort: t.sort, price_label: t.priceLabel,
+  })), 'id', true),
   insert('kindness_levels', KINDNESS_LEVELS.map((l) => ({
     level: l.level, name: l.name, min_points: l.minPoints, min_givers: l.minGivers, meaning: l.meaning,
   })), 'level'),
   insert('courses', courses.map((c) => ({
     id: c.id, track_id: c.trackId, title: c.title, kind: c.kind, summary: c.summary,
     price_label: c.priceLabel, sort: c.sort, in_subscription: c.inSubscription, is_free: c.isFree,
-    min_kindness_level: c.minKindnessLevel, reward_only: c.rewardOnly,
-  }))),
+    min_kindness_level: c.minKindnessLevel, reward_only: c.rewardOnly, low_ticket: Boolean(c.lowTicket), format: c.format ?? null,
+  })), 'id', true),
   insert('track_rewards', TRACK_REWARDS.map((r) => ({
     id: r.id, track_id: r.trackId, kind: r.kind, title: r.title, description: r.description, cost: r.cost,
     min_level: r.minLevel, course_id: r.courseId ?? null,
   }))),
-  insert('modules', modules.map((m) => ({ id: m.id, course_id: m.courseId, title: m.title, sort: m.sort }))),
+  insert('modules', modules.map((m) => ({ id: m.id, course_id: m.courseId, title: m.title, sort: m.sort })), 'id', true),
   insert('lessons', lessons.map((l) => ({
     id: l.id, module_id: l.moduleId, course_id: l.courseId, title: l.title, summary: l.summary,
     kind: l.kind, duration_min: l.durationMin, sort: l.sort, is_preview: l.isPreview,
-  }))),
+  })), 'id', true),
   // Não sobrescreve links de mídia já cadastrados no painel.
   insert('lesson_media', lessonMedia.map((m) => ({ lesson_id: m.lessonId, media_url: m.mediaUrl, body: m.body })), 'lesson_id')
     .replace(/on conflict \(lesson_id\) do update set .*;/, 'on conflict (lesson_id) do nothing;'),
   // Produtos: mantém o id e o checkout da Hotmart que o time já preencheu.
   insert('products', products.map((p) => ({ id: p.id, name: p.name })), 'id'),
   insert('product_courses', products.flatMap((p) => p.courseIds.map((courseId) => ({ product_id: p.id, course_id: courseId }))), 'product_id, course_id'),
+  '-- Produtos antigos (assinatura geral e venda de curso avulso da trilha) saem da vitrine.',
+  "update public.products p set active = false where p.id = 'assinatura-vivah'",
+  '  or exists (select 1 from public.courses c where c.id = p.id and not c.low_ticket);',
   insert('diagnostic_questions', diagnosticQuestions.map((q) => ({
     id: q.id, area: q.area, prompt: q.prompt, options: q.options, sort: q.sort,
   }))),

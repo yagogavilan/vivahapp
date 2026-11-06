@@ -6,7 +6,7 @@ import { useSession } from '@/auth/session';
 import { Icon, type IconName } from '@/components/ui';
 import { ScreenSkeleton } from '@/components/visual';
 import { useLibrary, useUpdateProfile } from '@/data/hooks';
-import { AQUECIMENTO, spaceAccess, spaceFor } from '@/domain/spaces';
+import { AQUECIMENTO, spaceFor } from '@/domain/spaces';
 import { SpaceProvider } from '@/lib/space-context';
 import { colors, fonts, WIDE } from '@/theme';
 
@@ -33,11 +33,8 @@ export default function SpaceLayout() {
   if (library.isPending) return <ScreenSkeleton />;
   const lib = library.data;
   const space = lib ? spaceFor(track ?? '', lib.tracks) : undefined;
+  // Todas as trilhas abrem para o aluno conhecer; os cursos e a comunidade pedem assinatura.
   if (!lib || !space) return <Redirect href="/" />;
-  // Trilha não comprada (ou ainda não lançada): mostra a vitrine dela.
-  if (spaceAccess(space.id, lib.tracks, lib.courses, lib.access) !== 'open') {
-    return <Redirect href={{ pathname: '/trilha/[id]', params: { id: space.id } }} />;
-  }
 
   return (
     <SpaceProvider space={space}>

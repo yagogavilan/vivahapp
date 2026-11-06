@@ -44,7 +44,8 @@ const detailHeader = {
 } as const;
 
 function RootNavigator() {
-  const { status, onboarded } = useSession();
+  const { status, onboarded, profile } = useSession();
+  const isAdmin = profile?.role === 'admin';
   const signedIn = status === 'signedIn';
 
   useEffect(() => {
@@ -100,6 +101,12 @@ function RootNavigator() {
         <Stack.Screen name="conselheiro" options={detailHeader} />
         <Stack.Screen name="conselho/novo" options={{ ...detailHeader, presentation: 'modal' }} />
         <Stack.Screen name="conselho/[id]" options={detailHeader} />
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn && onboarded && isAdmin}>
+        <Stack.Screen name="admin/index" options={{ ...detailHeader, title: 'Administração' }} />
+        <Stack.Screen name="admin/trilha/[id]" options={{ ...detailHeader, title: 'Trilha' }} />
+        <Stack.Screen name="admin/curso/[id]" options={{ ...detailHeader, title: 'Curso' }} />
+        <Stack.Screen name="admin/aula/[id]" options={{ ...detailHeader, title: 'Aula' }} />
       </Stack.Protected>
     </Stack>
   );

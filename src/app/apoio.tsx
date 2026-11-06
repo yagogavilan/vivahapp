@@ -7,6 +7,7 @@ import { usePost, useSupportMutations } from '@/data/hooks';
 import { addDays, dayKey, formatDayLabel, spDateTime } from '@/domain/dates';
 import { programFor } from '@/domain/programs';
 import { success, tap } from '@/lib/haptics';
+import { TrackContextBar } from '@/components/space';
 import { colors, fonts, radius, space } from '@/theme';
 
 const TIMES = ['07:00', '08:00', '12:00', '13:00', '18:00', '19:00', '20:00', '21:00'];
@@ -30,6 +31,7 @@ export default function Apoio() {
 
   return (
     <Screen padTop={false}>
+      <TrackContextBar trackId={track} />
       <View style={{ gap: space.xs }}>
         <Txt variant="eyebrow">Apoio · +5 pontos quando confirmado</Txt>
         <Txt variant="hero">{spec.label}</Txt>

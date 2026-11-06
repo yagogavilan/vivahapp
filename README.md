@@ -10,9 +10,20 @@ Este é o **MVP de 01/12/2026**:
 - **Acesso pela Hotmart:** a compra aprovada libera o curso para o e-mail do comprador. Reembolso, chargeback e cancelamento tiram o acesso.
 - **Comunidade:** canal Aquecimento, aberto a todos, e um canal por trilha, só para alunos.
 - **Agenda:** lives, aulas, foco, treino e refeições, com "salvar a live na agenda".
-- **Diagnóstico:** 12 perguntas que recomendam por qual trilha começar.
+- **Teste de momento de vida:** 14 perguntas no primeiro acesso indicam o momento e a trilha para começar.
 - **Check-in de humor e sono:** só com consentimento (dado de saúde, LGPD art. 11).
 - **Privacidade:** o aluno exporta os próprios dados e apaga a conta dentro do app, como as lojas exigem.
+
+### Teste de momento de vida, assinatura por trilha e página de admin (versão 5)
+
+- **Teste do primeiro acesso:** 14 perguntas (mente, tempo, corpo, alimentação, finanças, carreira e o objetivo para os próximos 3 meses). Mostra o **momento de vida** (reequilíbrio, organização, estabilidade ou crescimento, em 4 degraus) e a **trilha indicada**, respeitando a ordem da jornada: Respira → Ritmo, Move, Nutre → Prospera → Eleva; quem chega pela carreira com a base em ordem segue Eleva → Ritmo → Prospera. É só indicação: todas as trilhas aparecem e qualquer uma pode ser a primeira. Regras em `src/domain/life-test.ts`; o aluno refaz o teste pela tela inicial ou pelo Perfil.
+- **Trilha sempre à vista:** em Hoje, Cursos, Comunidade e Prêmios o topo mostra "Você está na trilha …" (toque para trocar); nas telas internas (curso, aula, plano, check-in, socorro, publicar, apoio, conselheiros, post) aparece a etiqueta da trilha.
+- **Cobrança por trilha, anual:** toda trilha abre para o aluno conhecer (Hoje e Socorro são livres); os **cursos, a comunidade e os conselheiros** pedem a assinatura anual daquela trilha (produto `trilha-<id>`). Quem assina recebe também os cursos novos que o admin criar depois.
+- **Sequência obrigatória:** dentro da trilha, a próxima aula só abre quando a anterior foi concluída (curso, módulo, aula). O app mostra o cadeado e leva à "aula da vez"; o banco aplica a mesma regra (`can_read_lesson`).
+- **Low tickets:** seção própria em Cursos com aulas curtas, planilhas e ferramentas de cada trilha, cada uma com preço e link próprios, fora da sequência. Low ticket não abre a comunidade.
+- **Página de admin** (Perfil → Administração, só para `role = admin`): por trilha, preço e link de pagamento da assinatura, situação (no ar / em breve), cursos em ordem (setas para reordenar), low tickets, módulos e aulas (título, formato, duração, link do vídeo/áudio/arquivo, texto, aula grátis). Cada curso criado entra sozinho no produto certo. Curso que já tem alunos não pode ser apagado.
+
+Migração `20261108000000_trilha_anual_admin.sql`. Na demonstração, entre com um e-mail que comece com `admin` para ver a página de admin.
 
 ### Pontos, recompensas e o propósito de cada trilha (versão 4)
 
@@ -60,7 +71,7 @@ O app da Apple Store e da Play Store **não vende nada**: não mostra preço, bo
 
 | Onde | Trilha bloqueada |
 |---|---|
-| **Web / desktop** | Mostra o preço e o botão **Quero acessar**, que abre o checkout da Hotmart já com o e-mail do aluno |
+| **Web / desktop** | Mostra o preço da assinatura anual (ou do low ticket) e o botão **Assinar a trilha**, que abre o checkout já com o e-mail do aluno |
 | **iPhone / Android** | Mostra "Conteúdo para alunos Vivah", explica que o acesso aparece com o mesmo e-mail da inscrição e oferece **Atualizar meus acessos** |
 
 A venda acontece no pitch das lives, nos grupos, no WhatsApp, no e-mail e na versão web. Dentro do app de celular, o player das lives não deixa abrir links. Na hora do pitch, o link da Hotmart vai pelo WhatsApp.
@@ -112,14 +123,14 @@ npx eas-cli@latest build --profile development --platform ios     # ou android
    - Eventos: compra aprovada, completa, cancelada, reembolsada, chargeback, protesto, expirada e cancelamento de assinatura.
    - Copie o **hottok** e grave com `supabase secrets set HOTMART_HOTTOK=...`.
 2. No Supabase, tabela **products**: em cada produto, preencha `hotmart_product_id` (o ID numérico do produto na Hotmart) e `checkout_url` (o link de pagamento `https://pay.hotmart.com/...`).
-3. A tabela **product_courses** diz quais cursos cada produto libera. O seed já liga cada curso ao seu produto, e a **Assinatura Vivah** a todos os cursos marcados como `in_subscription`.
+3. A tabela **product_courses** diz quais cursos cada produto libera. Cada curso da trilha entra sozinho no produto `trilha-<id>` (assinatura anual) e cada low ticket vira um produto com o próprio id. O link de pagamento pode ser preenchido na página de admin. A assinatura deve durar um ano: quando a plataforma de pagamento for integrada, grave `expires_at` no acesso.
 4. Use **Enviar teste** na Hotmart e confira a tabela **hotmart_events**: o campo `result` mostra `liberado`, `revogado`, `ignorado` ou o erro (por exemplo, produto não cadastrado). Depois de corrigir o cadastro, reenvie o evento pelo painel da Hotmart e ele é processado de novo.
 
 Order bumps e upsells são produtos próprios na Hotmart. Cadastre cada um em `products` com o seu ID.
 
 ## Cadastrar conteúdo (sem programar)
 
-Tudo é feito pelo **Table Editor** do Supabase:
+Cursos, módulos, aulas, low tickets, preços e links de pagamento: pela **página de admin do app** (Perfil → Administração). O resto, pelo **Table Editor** do Supabase:
 
 | O quê | Tabela | Campo |
 |---|---|---|
@@ -133,7 +144,7 @@ Tudo é feito pelo **Table Editor** do Supabase:
 
 Os arquivos podem ficar no **Storage** do Supabase. Para vídeo pago, prefira um player com link assinado (Panda Video, Vimeo, Bunny Stream). O app só entrega o link a quem tem acesso, mas um link público continua funcionando para quem o tiver em mãos.
 
-O catálogo inicial (trilhas, cursos, aulas, produtos, lives, Escudo e diagnóstico) fica em `src/data/catalog.ts`. Depois de mudar esse arquivo, rode `npm run seed:generate` e aplique o `supabase/seed.sql` de novo. O seed só atualiza o catálogo: não apaga compras, progresso nem posts, e não sobrescreve vídeos ou checkouts já cadastrados.
+O catálogo inicial (trilhas, cursos, aulas, produtos, lives, Escudo e diagnóstico) fica em `src/data/catalog.ts`. Rode `npm run seed:generate` e aplique o `supabase/seed.sql` num banco novo. Rodar o seed de novo só **cria o que falta** em trilhas, cursos, módulos e aulas, para não desfazer o que foi editado na página de admin; níveis, recompensas, lives e Escudo são atualizados. Não apaga compras, progresso nem posts.
 
 ## Publicar
 
