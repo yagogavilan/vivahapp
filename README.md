@@ -129,16 +129,24 @@ O que foi ajustado para chegar a isso (migração `20261109000000_desempenho.sql
 ```bash
 npm install
 npm run web          # abre no navegador
-npx expo start       # QR code para abrir no celular
 ```
 
-Sem `.env`, o app abre em **modo demonstração**: aceita qualquer e-mail, o código é `123456` e vem com uma aluna que já tem o Protocolo e o Calma em 5 Minutos. Serve para os sócios navegarem antes do backend estar pronto.
+Sem `.env`, o app abre em **modo demonstração**: aceita qualquer e-mail, o código é `123456` e vem com uma aluna que já assina a Respira e tem o low ticket Calma em 5 Minutos. E-mail que começa com `admin` entra como administrador.
 
-`expo-audio`, `expo-video` e `react-native-webview` têm código nativo. Para testar no celular com tudo funcionando, use um development build:
+### Testar no iPhone
 
-```bash
-npx eas-cli@latest build --profile development --platform ios     # ou android
-```
+O Expo Go da App Store só abre projetos até o SDK 54, e este app usa o SDK 58. Há três caminhos:
+
+1. **Versão web no Safari (sem conta da Apple):** publique na Vercel (o `vercel.json` já está pronto: em vercel.com, importe o repositório do GitHub e clique em Deploy) e abra o link no iPhone. Em Compartilhar → Adicionar à Tela de Início, ele vira um ícone. Não tem notificações nem os recursos nativos, mas serve para navegar por todas as telas.
+2. **Development build (o app de verdade, atualiza na hora enquanto você programa):** precisa do Apple Developer Program (US$ 99 por ano). O build é feito na nuvem da Expo, sem precisar de Mac.
+   ```bash
+   npx eas-cli@latest login
+   npx eas-cli@latest device:create          # gera um link: abra no iPhone e instale o perfil
+   npx eas-cli@latest build --profile development --platform ios
+   npx expo start --dev-client               # com o iPhone na mesma rede Wi-Fi (ou --tunnel)
+   ```
+   No iPhone, ative Ajustes → Privacidade e Segurança → Modo de Desenvolvedor, instale pelo link do build e abra o projeto pelo QR code.
+3. **TestFlight (para os sócios testarem):** `npx eas-cli@latest build --profile production --platform ios` e depois `npx eas-cli@latest submit --platform ios`. Cada um instala pelo app TestFlight, sem cadastrar aparelho.
 
 ## Ligar o Supabase
 
