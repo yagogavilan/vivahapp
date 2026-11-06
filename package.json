@@ -59,7 +59,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "seed:generate": "tsx scripts/generate-seed.ts",
-    "db:test": "bash supabase/tests/run.sh"
+    "db:test": "bash supabase/tests/run.sh",
+    "db:load": "bash supabase/tests/run.sh && psql -X -q -U ${PGUSER:-postgres} -h ${PGHOST:-localhost} -d ${VIVAH_TEST_DB:-vivah_test} -f supabase/tests/load.sql && bash supabase/tests/bench.sh"
   },
   "private": true
 }

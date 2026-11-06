@@ -69,8 +69,15 @@ const toAdvice = (r: Row): AdviceRequest => ({
 });
 
 
+/**
+ * Id do aluno logado. Lê a sessão guardada no aparelho (sem ir ao servidor de
+ * login a cada consulta); quem garante a segurança é o RLS no banco.
+ */
 async function currentUserId(): Promise<string> {
-  const { data } = await requireSupabase().auth.getUser();
+  const sb = requireSupabase();
+  const { data: session } = await sb.auth.getSession();
+  if (session.session?.user) return session.session.user.id;
+  const { data } = await sb.auth.getUser();
   if (!data.user) throw new Error('Sua sessão expirou. Entre de novo.');
   return data.user.id;
 }
@@ -213,7 +220,7 @@ export const supabaseApi: Api = {
   },
 
   async getProgress(): Promise<LessonProgress[]> {
-    const rows = check(await requireSupabase().from('lesson_progress').select('*')) as Row[];
+    const rows = check(await requireSupabase().from('lesson_progress').select('*').eq('user_id', await currentUserId())) as Row[];
     return rows.map((r) => ({ lessonId: r.lesson_id, positionSec: r.position_sec, completedAt: r.completed_at }));
   },
 
@@ -347,7 +354,7 @@ export const supabaseApi: Api = {
 
   async getPointEvents(trackId) {
     const rows = check(
-      await requireSupabase().from('point_events').select('*').eq('track_id', trackId).order('created_at', { ascending: false }).limit(100),
+      await requireSupabase().from('point_events').select('*').eq('user_id', await currentUserId()).eq('track_id', trackId).order('created_at', { ascending: false }).limit(100),
     ) as Row[];
     return rows.map((r) => ({
       id: r.id,
@@ -362,7 +369,7 @@ export const supabaseApi: Api = {
   },
 
   async getRedemptions() {
-    const rows = check(await requireSupabase().from('reward_redemptions').select('*').order('created_at', { ascending: false })) as Row[];
+    const rows = check(await requireSupabase().from('reward_redemptions').select('*').eq('user_id', await currentUserId()).order('created_at', { ascending: false })) as Row[];
     return rows.map((r) => ({ id: r.id, rewardId: r.reward_id, trackId: r.track_id, cost: r.cost, status: r.status, createdAt: r.created_at }));
   },
 
@@ -373,7 +380,7 @@ export const supabaseApi: Api = {
   async getDailyLogs(trackId, days) {
     const from = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
     const rows = check(
-      await requireSupabase().from('daily_logs').select('*').eq('track_id', trackId).gte('day', from).order('day', { ascending: false }),
+      await requireSupabase().from('daily_logs').select('*').eq('user_id', await currentUserId()).eq('track_id', trackId).gte('day', from).order('day', { ascending: false }),
     ) as Row[];
     return rows.map((r) => ({ day: r.day, trackId: r.track_id, kind: r.kind, data: r.data ?? {}, score: r.score, valid: r.valid }));
   },
@@ -481,7 +488,7 @@ export const supabaseApi: Api = {
   async getAgenda(): Promise<AgendaEvent[]> {
     const from = new Date(Date.now() - 86_400_000).toISOString();
     const rows = check(
-      await requireSupabase().from('agenda_events').select('*').gte('starts_at', from).order('starts_at'),
+      await requireSupabase().from('agenda_events').select('*').eq('user_id', await currentUserId()).gte('starts_at', from).order('starts_at'),
     ) as Row[];
     return rows.map((r) => ({
       id: r.id,
@@ -518,7 +525,7 @@ export const supabaseApi: Api = {
 
   async getLatestDiagnostic(): Promise<DiagnosticResult | null> {
     const r = check(
-      await requireSupabase().from('diagnostic_results').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      await requireSupabase().from('diagnostic_results').select('*').eq('user_id', await currentUserId()).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ) as Row | null;
     return r
       ? { id: r.id, createdAt: r.created_at, answers: r.answers, scores: r.scores, recommendedTrackId: r.recommended_track, moment: r.moment ?? null }
@@ -532,7 +539,7 @@ export const supabaseApi: Api = {
   async getCheckins(days): Promise<Checkin[]> {
     const from = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
     const rows = check(
-      await requireSupabase().from('checkins').select('*').gte('day', from).order('day', { ascending: false }),
+      await requireSupabase().from('checkins').select('*').eq('user_id', await currentUserId()).gte('day', from).order('day', { ascending: false }),
     ) as Row[];
     return rows.map((r) => ({
       day: r.day,
@@ -570,7 +577,7 @@ export const supabaseApi: Api = {
   async getActivity(days): Promise<Activity[]> {
     const from = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
     const rows = check(
-      await requireSupabase().from('activity_log').select('day, kind, ref, minutes').gte('day', from).order('day', { ascending: false }),
+      await requireSupabase().from('activity_log').select('day, kind, ref, minutes').eq('user_id', await currentUserId()).gte('day', from).order('day', { ascending: false }),
     ) as Row[];
     return rows.map((r) => ({ day: r.day, kind: r.kind, ref: r.ref, minutes: r.minutes }));
   },
@@ -599,7 +606,7 @@ export const supabaseApi: Api = {
   },
 
   async getFavorites() {
-    const rows = check(await requireSupabase().from('favorites').select('*').order('created_at', { ascending: false })) as Row[];
+    const rows = check(await requireSupabase().from('favorites').select('*').eq('user_id', await currentUserId()).order('created_at', { ascending: false })) as Row[];
     return rows.map((r) => ({ itemType: r.item_type, itemId: r.item_id, createdAt: r.created_at }));
   },
 
