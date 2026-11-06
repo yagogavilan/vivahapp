@@ -20,10 +20,13 @@ export function lessonOpen(lesson: Lesson, state: CourseState): boolean {
   return state === 'locked' && lesson.isPreview;
 }
 
-/** Estado da trilha na vitrine: aberta se ao menos um curso dela estiver aberto. */
+/**
+ * Estado da trilha: aberta se o aluno comprou algum curso dela.
+ * Curso grátis e curso exclusivo de bondade não abrem a trilha.
+ */
 export function trackState(track: Track, trackCourses: Course[], access: ReadonlySet<string>): CourseState {
   if (track.status === 'soon') return 'soon';
-  return trackCourses.some((c) => courseState(c, track, access) === 'open') ? 'open' : 'locked';
+  return trackCourses.some((c) => !c.isFree && c.minKindnessLevel == null && access.has(c.id)) ? 'open' : 'locked';
 }
 
 /** Percentual de aulas concluídas, 0–100. */

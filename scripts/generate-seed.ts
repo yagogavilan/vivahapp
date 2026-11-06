@@ -15,6 +15,7 @@ import {
   products,
   tracks,
 } from '../src/data/catalog';
+import { KINDNESS_LEVELS, KINDNESS_REWARDS } from '../src/domain/kindness';
 import { buildEscudo, buildLives } from '../src/domain/schedule';
 
 /** Primeira live: quarta, 02/12/2026, dia seguinte ao lançamento. */
@@ -51,9 +52,16 @@ const sql = [
     description: t.description, promise: t.promise, teacher: t.teacher, status: t.status,
     launch_label: t.launchLabel, sort: t.sort,
   }))),
+  insert('kindness_levels', KINDNESS_LEVELS.map((l) => ({
+    level: l.level, name: l.name, min_points: l.minPoints, min_givers: l.minGivers, meaning: l.meaning,
+  })), 'level'),
   insert('courses', courses.map((c) => ({
     id: c.id, track_id: c.trackId, title: c.title, kind: c.kind, summary: c.summary,
     price_label: c.priceLabel, sort: c.sort, in_subscription: c.inSubscription, is_free: c.isFree,
+    min_kindness_level: c.minKindnessLevel,
+  }))),
+  insert('kindness_rewards', KINDNESS_REWARDS.map((r) => ({
+    id: r.id, level: r.level, kind: r.kind, title: r.title, description: r.description, course_id: r.courseId ?? null,
   }))),
   insert('modules', modules.map((m) => ({ id: m.id, course_id: m.courseId, title: m.title, sort: m.sort }))),
   insert('lessons', lessons.map((l) => ({

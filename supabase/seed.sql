@@ -10,31 +10,63 @@ insert into public.tracks (id, title, area, area_label, subtitle, description, p
   ('nutre', 'Nutre', 'alimentacao', 'Alimentação', 'Reeducação alimentar, rotina de refeições e compras', 'Para quem come mal na correria. Hábitos, cardápio da semana e lista de compras, com nutricionista (CRN), sem dieta da moda.', 'Comer bem sem complicar.', 'Nutricionista (CRN)', 'soon', 'Junho de 2027', 6)
 on conflict (id) do update set title = excluded.title, area = excluded.area, area_label = excluded.area_label, subtitle = excluded.subtitle, description = excluded.description, promise = excluded.promise, teacher = excluded.teacher, status = excluded.status, launch_label = excluded.launch_label, sort = excluded.sort;
 
-insert into public.courses (id, track_id, title, kind, summary, price_label, sort, in_subscription, is_free) values
-  ('protocolo-desligando-a-mente', 'respira', 'Protocolo Desligando a Mente em 7 Dias', 'entrada', 'Cinco aulas de 10 minutos e um exercício por dia para aprender a interromper a ruminação.', 'R$ 47', 1, true, false),
-  ('calma-em-5-minutos', 'respira', 'Calma em 5 Minutos', 'bonus', 'Dez áudios guiados de 5 minutos para os momentos em que a mente acelera.', 'R$ 27 no checkout · R$ 37 avulso', 2, true, false),
-  ('kit-descarrega-a-mente', 'respira', 'Kit Descarrega a Mente', 'bonus', 'Diário de ruminação, mapa de gatilhos e planner do horário da preocupação, para imprimir ou preencher.', 'R$ 19', 3, true, false),
-  ('desafio-21-dias', 'respira', 'Desafio 21 Dias de Mente Quieta', 'entrada', 'Um áudio de 10 minutos por dia, durante 21 dias, para instalar o hábito com a comunidade.', 'R$ 67', 4, true, false),
-  ('mente-silenciosa', 'respira', 'Mente Silenciosa', 'programa', 'Programa de 30 dias: aula curta diária, prática guiada e dois encontros ao vivo com o Edmilson.', 'R$ 497', 5, false, false),
-  ('terra-firme', 'respira', 'Terra Firme', 'programa', 'Continuação do Mente Silenciosa: 8 semanas, 16 aulas, quatro encontros ao vivo e trilha de hábitos.', 'R$ 997', 6, false, false),
-  ('circulo-vivah', 'respira', 'Círculo Vivah', 'acompanhamento', 'Encontros semanais em grupo com o Edmilson, masterclass mensal e grupo fechado, por um ano.', 'R$ 2.997 por ano', 7, false, false),
-  ('semana-organizada', 'ritmo', 'Semana Organizada em 7 Dias', 'entrada', 'Método de prioridades e planner digital para organizar a semana em sete dias.', 'R$ 37', 8, true, false),
-  ('dono-do-meu-tempo', 'ritmo', 'Dono do Meu Tempo', 'programa', 'Trinta dias para montar e manter a rotina, com dois encontros ao vivo.', 'R$ 497', 9, false, false),
-  ('checklist-cs-que-retem', 'eleva', 'Checklist CS que Retém', 'entrada', 'Checklists práticos de onboarding, acompanhamento e renovação para reter clientes.', 'R$ 27', 10, true, false),
-  ('carreira-em-ordem', 'eleva', 'Carreira em Ordem', 'entrada', 'Um plano de 90 dias para organizar a carreira e o próximo passo.', 'R$ 47', 11, true, false),
-  ('maquina-de-clientes', 'eleva', 'Máquina de Clientes', 'programa', 'CS, vendas e retenção na prática, do primeiro contato à renovação.', 'R$ 997', 12, false, false),
-  ('carreira-em-alta', 'eleva', 'Carreira em Alta', 'programa', 'Posicionamento, comunicação e liderança para crescer no trabalho.', 'R$ 997', 13, false, false),
-  ('mentoria-carreira', 'eleva', 'Mentoria Carreira Vivah', 'acompanhamento', 'Mentoria em grupo com plano individual de carreira.', 'R$ 2.997', 14, false, false),
-  ('mes-no-azul', 'prospera', 'Mês no Azul em 30 Dias', 'entrada', 'Aulas curtas e planilha de orçamento para fechar o mês no azul.', 'R$ 47', 15, true, false),
-  ('dinheiro-em-ordem', 'prospera', 'Dinheiro em Ordem', 'programa', 'Oito semanas: orçamento, dívidas, reserva e primeiros investimentos.', 'R$ 697', 16, false, false),
-  ('circulo-prospera', 'prospera', 'Círculo Prospera', 'acompanhamento', 'Encontro mensal em grupo para revisar metas e números.', 'R$ 1.497 por ano', 17, false, false),
-  ('corpo-em-movimento', 'move', 'Corpo em Movimento em 21 Dias', 'entrada', 'Treinos de 15 minutos em casa, em três níveis.', 'R$ 47', 18, true, false),
-  ('treino-em-casa-12-semanas', 'move', 'Treino em Casa 12 Semanas', 'programa', 'Programa progressivo de 12 semanas montado pelo educador físico.', 'R$ 497', 19, false, false),
-  ('acompanhamento-move', 'move', 'Acompanhamento Move', 'acompanhamento', 'Seis meses com avaliação e ajuste mensal do treino pelo educador físico.', 'R$ 1.997', 20, false, false),
-  ('cardapio-da-semana', 'nutre', 'Cardápio da Semana em 7 Dias', 'entrada', 'Receitas simples e lista de compras pronta para a semana.', 'R$ 37', 21, true, false),
-  ('reeducacao-alimentar', 'nutre', 'Reeducação Alimentar 8 Semanas', 'programa', 'Hábitos, rotina de refeições e compras, sem dieta da moda.', 'R$ 597', 22, false, false),
-  ('nutre-individual', 'nutre', 'Nutre Individual', 'acompanhamento', 'Consulta e plano alimentar individual com nutricionista, com dois retornos.', 'R$ 1.497', 23, false, false)
-on conflict (id) do update set track_id = excluded.track_id, title = excluded.title, kind = excluded.kind, summary = excluded.summary, price_label = excluded.price_label, sort = excluded.sort, in_subscription = excluded.in_subscription, is_free = excluded.is_free;
+insert into public.kindness_levels (level, name, min_points, min_givers, meaning) values
+  (1, 'Semente', 0, 0, 'Toda bondade começa pequena.'),
+  (2, 'Mão Amiga', 50, 5, 'Estende a mão para quem precisa.'),
+  (3, 'Ombro Amigo', 200, 15, 'Escuta sem julgar e acolhe.'),
+  (4, 'Coração Gentil', 500, 35, 'A gentileza virou jeito de ser.'),
+  (5, 'Ponte', 1200, 70, 'Liga pessoas ao que elas precisam.'),
+  (6, 'Farol', 2500, 120, 'Ilumina o caminho em dias escuros.'),
+  (7, 'Porto Seguro', 5000, 200, 'Um lugar seguro para chegar.'),
+  (8, 'Luz Vivah', 10000, 350, 'Inspira a comunidade inteira.')
+on conflict (level) do update set name = excluded.name, min_points = excluded.min_points, min_givers = excluded.min_givers, meaning = excluded.meaning;
+
+insert into public.courses (id, track_id, title, kind, summary, price_label, sort, in_subscription, is_free, min_kindness_level) values
+  ('protocolo-desligando-a-mente', 'respira', 'Protocolo Desligando a Mente em 7 Dias', 'entrada', 'Cinco aulas de 10 minutos e um exercício por dia para aprender a interromper a ruminação.', 'R$ 47', 1, true, false, null),
+  ('calma-em-5-minutos', 'respira', 'Calma em 5 Minutos', 'bonus', 'Dez áudios guiados de 5 minutos para os momentos em que a mente acelera.', 'R$ 27 no checkout · R$ 37 avulso', 2, true, false, null),
+  ('kit-descarrega-a-mente', 'respira', 'Kit Descarrega a Mente', 'bonus', 'Diário de ruminação, mapa de gatilhos e planner do horário da preocupação, para imprimir ou preencher.', 'R$ 19', 3, true, false, null),
+  ('desafio-21-dias', 'respira', 'Desafio 21 Dias de Mente Quieta', 'entrada', 'Um áudio de 10 minutos por dia, durante 21 dias, para instalar o hábito com a comunidade.', 'R$ 67', 4, true, false, null),
+  ('mente-silenciosa', 'respira', 'Mente Silenciosa', 'programa', 'Programa de 30 dias: aula curta diária, prática guiada e dois encontros ao vivo com o Edmilson.', 'R$ 497', 5, false, false, null),
+  ('terra-firme', 'respira', 'Terra Firme', 'programa', 'Continuação do Mente Silenciosa: 8 semanas, 16 aulas, quatro encontros ao vivo e trilha de hábitos.', 'R$ 997', 6, false, false, null),
+  ('circulo-vivah', 'respira', 'Círculo Vivah', 'acompanhamento', 'Encontros semanais em grupo com o Edmilson, masterclass mensal e grupo fechado, por um ano.', 'R$ 2.997 por ano', 7, false, false, null),
+  ('semana-organizada', 'ritmo', 'Semana Organizada em 7 Dias', 'entrada', 'Método de prioridades e planner digital para organizar a semana em sete dias.', 'R$ 37', 8, true, false, null),
+  ('dono-do-meu-tempo', 'ritmo', 'Dono do Meu Tempo', 'programa', 'Trinta dias para montar e manter a rotina, com dois encontros ao vivo.', 'R$ 497', 9, false, false, null),
+  ('checklist-cs-que-retem', 'eleva', 'Checklist CS que Retém', 'entrada', 'Checklists práticos de onboarding, acompanhamento e renovação para reter clientes.', 'R$ 27', 10, true, false, null),
+  ('carreira-em-ordem', 'eleva', 'Carreira em Ordem', 'entrada', 'Um plano de 90 dias para organizar a carreira e o próximo passo.', 'R$ 47', 11, true, false, null),
+  ('maquina-de-clientes', 'eleva', 'Máquina de Clientes', 'programa', 'CS, vendas e retenção na prática, do primeiro contato à renovação.', 'R$ 997', 12, false, false, null),
+  ('carreira-em-alta', 'eleva', 'Carreira em Alta', 'programa', 'Posicionamento, comunicação e liderança para crescer no trabalho.', 'R$ 997', 13, false, false, null),
+  ('mentoria-carreira', 'eleva', 'Mentoria Carreira Vivah', 'acompanhamento', 'Mentoria em grupo com plano individual de carreira.', 'R$ 2.997', 14, false, false, null),
+  ('mes-no-azul', 'prospera', 'Mês no Azul em 30 Dias', 'entrada', 'Aulas curtas e planilha de orçamento para fechar o mês no azul.', 'R$ 47', 15, true, false, null),
+  ('dinheiro-em-ordem', 'prospera', 'Dinheiro em Ordem', 'programa', 'Oito semanas: orçamento, dívidas, reserva e primeiros investimentos.', 'R$ 697', 16, false, false, null),
+  ('circulo-prospera', 'prospera', 'Círculo Prospera', 'acompanhamento', 'Encontro mensal em grupo para revisar metas e números.', 'R$ 1.497 por ano', 17, false, false, null),
+  ('corpo-em-movimento', 'move', 'Corpo em Movimento em 21 Dias', 'entrada', 'Treinos de 15 minutos em casa, em três níveis.', 'R$ 47', 18, true, false, null),
+  ('treino-em-casa-12-semanas', 'move', 'Treino em Casa 12 Semanas', 'programa', 'Programa progressivo de 12 semanas montado pelo educador físico.', 'R$ 497', 19, false, false, null),
+  ('acompanhamento-move', 'move', 'Acompanhamento Move', 'acompanhamento', 'Seis meses com avaliação e ajuste mensal do treino pelo educador físico.', 'R$ 1.997', 20, false, false, null),
+  ('cardapio-da-semana', 'nutre', 'Cardápio da Semana em 7 Dias', 'entrada', 'Receitas simples e lista de compras pronta para a semana.', 'R$ 37', 21, true, false, null),
+  ('reeducacao-alimentar', 'nutre', 'Reeducação Alimentar 8 Semanas', 'programa', 'Hábitos, rotina de refeições e compras, sem dieta da moda.', 'R$ 597', 22, false, false, null),
+  ('nutre-individual', 'nutre', 'Nutre Individual', 'acompanhamento', 'Consulta e plano alimentar individual com nutricionista, com dois retornos.', 'R$ 1.497', 23, false, false, null),
+  ('escuta-que-acolhe', 'respira', 'Escuta que Acolhe', 'bonus', 'Como ajudar alguém na comunidade sem dar sermão nem conselho apressado.', null, 24, false, false, 3),
+  ('roda-dos-gentis', 'respira', 'Roda dos Gentis', 'acompanhamento', 'Encontro ao vivo mensal, fechado, com o Edmilson e os Corações Gentis.', null, 25, false, false, 4),
+  ('conversas-dificeis', 'respira', 'Conversas Difíceis', 'bonus', 'Como apoiar alguém em crise, colocar limites e saber a hora de encaminhar para ajuda profissional.', null, 26, false, false, 5),
+  ('formacao-conselheiro', 'respira', 'Formação de Conselheiro', 'bonus', 'Obrigatória antes de abrir o espaço de conselheiro: papel, limites e código de conduta.', null, 27, false, false, 6),
+  ('mentoria-porto-seguro', 'respira', 'Mentoria Porto Seguro', 'acompanhamento', 'Mentoria em grupo, uma vez por trimestre, com o Edmilson.', null, 28, false, false, 7)
+on conflict (id) do update set track_id = excluded.track_id, title = excluded.title, kind = excluded.kind, summary = excluded.summary, price_label = excluded.price_label, sort = excluded.sort, in_subscription = excluded.in_subscription, is_free = excluded.is_free, min_kindness_level = excluded.min_kindness_level;
+
+insert into public.kindness_rewards (id, level, kind, title, description, course_id) values
+  ('selo-mao-amiga', 2, 'selo', 'Selo Mão Amiga', 'Aparece ao lado do seu nome em tudo o que você publica.', null),
+  ('conteudo-escuta', 3, 'conteudo', 'Aula exclusiva: Escuta que acolhe', 'Como ajudar alguém sem dar sermão nem conselho apressado.', 'escuta-que-acolhe'),
+  ('broche-coracao', 4, 'fisico', 'Broche Coração Gentil', 'Broche esmaltado da Vivah, enviado para a sua casa.', null),
+  ('roda-gentis', 4, 'conteudo', 'Roda dos Gentis', 'Encontro ao vivo mensal, fechado, com o Edmilson.', 'roda-dos-gentis'),
+  ('copo-ponte', 5, 'fisico', 'Copo térmico Ponte', 'Copo térmico Vivah com o seu nível gravado.', null),
+  ('conteudo-conversas', 5, 'conteudo', 'Masterclass: Conversas difíceis', 'Como apoiar alguém em crise e quando encaminhar para ajuda profissional.', 'conversas-dificeis'),
+  ('acesso-conselheiro', 6, 'acesso', 'Espaço de Conselheiro', 'Você abre um espaço para as pessoas pedirem conselho e trocarem experiências com você.', null),
+  ('formacao-farol', 6, 'conteudo', 'Formação de Conselheiro', 'Três aulas obrigatórias antes de abrir o seu espaço.', 'formacao-conselheiro'),
+  ('camiseta-farol', 6, 'fisico', 'Camiseta Farol Vivah', 'A camiseta que só os Faróis têm.', null),
+  ('mentoria-porto', 7, 'conteudo', 'Mentoria em grupo com o Edmilson', 'Um encontro por trimestre com os Portos Seguros.', 'mentoria-porto-seguro'),
+  ('kit-porto', 7, 'fisico', 'Kit Porto Seguro', 'Moletom, caderno e broche dourado.', null),
+  ('imersao-luz', 8, 'fisico', 'Convite para a imersão presencial', 'Ingresso para a próxima imersão da Vivah, com troféu entregue no palco.', null),
+  ('mural-luz', 8, 'selo', 'Nome no Mural da Bondade', 'Seu nome fica para sempre no mural do app.', null)
+on conflict (id) do update set level = excluded.level, kind = excluded.kind, title = excluded.title, description = excluded.description, course_id = excluded.course_id;
 
 insert into public.modules (id, course_id, title, sort) values
   ('protocolo-desligando-a-mente--m1', 'protocolo-desligando-a-mente', 'Entendendo a mente acelerada', 1),
@@ -61,7 +93,12 @@ insert into public.modules (id, course_id, title, sort) values
   ('acompanhamento-move--m1', 'acompanhamento-move', 'Conteúdo em produção', 1),
   ('cardapio-da-semana--m1', 'cardapio-da-semana', 'Conteúdo em produção', 1),
   ('reeducacao-alimentar--m1', 'reeducacao-alimentar', 'Conteúdo em produção', 1),
-  ('nutre-individual--m1', 'nutre-individual', 'Conteúdo em produção', 1)
+  ('nutre-individual--m1', 'nutre-individual', 'Conteúdo em produção', 1),
+  ('escuta-que-acolhe--m1', 'escuta-que-acolhe', 'A arte de escutar', 1),
+  ('roda-dos-gentis--m1', 'roda-dos-gentis', 'Conteúdo em produção', 1),
+  ('conversas-dificeis--m1', 'conversas-dificeis', 'Conteúdo em produção', 1),
+  ('formacao-conselheiro--m1', 'formacao-conselheiro', 'Formação', 1),
+  ('mentoria-porto-seguro--m1', 'mentoria-porto-seguro', 'Conteúdo em produção', 1)
 on conflict (id) do update set course_id = excluded.course_id, title = excluded.title, sort = excluded.sort;
 
 insert into public.lessons (id, module_id, course_id, title, summary, kind, duration_min, sort, is_preview) values
@@ -165,7 +202,18 @@ insert into public.lessons (id, module_id, course_id, title, summary, kind, dura
   ('reeducacao-alimentar--m1--a2', 'reeducacao-alimentar--m1', 'reeducacao-alimentar', 'Rotina de refeições', '', 'video', 12, 2, false),
   ('reeducacao-alimentar--m1--a3', 'reeducacao-alimentar--m1', 'reeducacao-alimentar', 'Comer fora', '', 'video', 12, 3, false),
   ('reeducacao-alimentar--m1--a4', 'reeducacao-alimentar--m1', 'reeducacao-alimentar', 'Manutenção', '', 'video', 12, 4, false),
-  ('nutre-individual--m1--a1', 'nutre-individual--m1', 'nutre-individual', 'Como funciona o acompanhamento', '', 'video', 12, 1, false)
+  ('nutre-individual--m1--a1', 'nutre-individual--m1', 'nutre-individual', 'Como funciona o acompanhamento', '', 'video', 12, 1, false),
+  ('escuta-que-acolhe--m1--a1', 'escuta-que-acolhe--m1', 'escuta-que-acolhe', 'Escutar não é resolver', '', 'video', 10, 1, false),
+  ('escuta-que-acolhe--m1--a2', 'escuta-que-acolhe--m1', 'escuta-que-acolhe', 'Perguntas que abrem espaço', '', 'video', 10, 2, false),
+  ('escuta-que-acolhe--m1--a3', 'escuta-que-acolhe--m1', 'escuta-que-acolhe', 'O que nunca dizer', '', 'video', 8, 3, false),
+  ('roda-dos-gentis--m1--a1', 'roda-dos-gentis--m1', 'roda-dos-gentis', 'Gravações das rodas', '', 'video', 12, 1, false),
+  ('conversas-dificeis--m1--a1', 'conversas-dificeis--m1', 'conversas-dificeis', 'Quando alguém está em crise', '', 'video', 12, 1, false),
+  ('conversas-dificeis--m1--a2', 'conversas-dificeis--m1', 'conversas-dificeis', 'Limites de quem ajuda', '', 'video', 12, 2, false),
+  ('conversas-dificeis--m1--a3', 'conversas-dificeis--m1', 'conversas-dificeis', 'Como encaminhar', '', 'video', 12, 3, false),
+  ('formacao-conselheiro--m1--a1', 'formacao-conselheiro--m1', 'formacao-conselheiro', 'O papel do conselheiro Vivah', '', 'video', 12, 1, false),
+  ('formacao-conselheiro--m1--a2', 'formacao-conselheiro--m1', 'formacao-conselheiro', 'Escuta, limites e cuidado com você', '', 'video', 12, 2, false),
+  ('formacao-conselheiro--m1--a3', 'formacao-conselheiro--m1', 'formacao-conselheiro', 'Sinais de risco e como encaminhar (CVV 188)', '', 'video', 12, 3, false),
+  ('mentoria-porto-seguro--m1--a1', 'mentoria-porto-seguro--m1', 'mentoria-porto-seguro', 'Gravações da mentoria', '', 'video', 12, 1, false)
 on conflict (id) do update set module_id = excluded.module_id, course_id = excluded.course_id, title = excluded.title, summary = excluded.summary, kind = excluded.kind, duration_min = excluded.duration_min, sort = excluded.sort, is_preview = excluded.is_preview;
 
 insert into public.lesson_media (lesson_id, media_url, body) values
@@ -269,7 +317,18 @@ insert into public.lesson_media (lesson_id, media_url, body) values
   ('reeducacao-alimentar--m1--a2', null, null),
   ('reeducacao-alimentar--m1--a3', null, null),
   ('reeducacao-alimentar--m1--a4', null, null),
-  ('nutre-individual--m1--a1', null, null)
+  ('nutre-individual--m1--a1', null, null),
+  ('escuta-que-acolhe--m1--a1', null, null),
+  ('escuta-que-acolhe--m1--a2', null, null),
+  ('escuta-que-acolhe--m1--a3', null, null),
+  ('roda-dos-gentis--m1--a1', null, null),
+  ('conversas-dificeis--m1--a1', null, null),
+  ('conversas-dificeis--m1--a2', null, null),
+  ('conversas-dificeis--m1--a3', null, null),
+  ('formacao-conselheiro--m1--a1', null, null),
+  ('formacao-conselheiro--m1--a2', null, null),
+  ('formacao-conselheiro--m1--a3', null, null),
+  ('mentoria-porto-seguro--m1--a1', null, null)
 on conflict (lesson_id) do nothing;
 
 insert into public.products (id, name) values

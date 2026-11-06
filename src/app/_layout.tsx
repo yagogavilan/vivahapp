@@ -72,7 +72,8 @@ function RootNavigator() {
         <Stack.Screen name="boas-vindas" />
       </Stack.Protected>
       <Stack.Protected guard={signedIn && onboarded}>
-        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="t/[track]" />
         <Stack.Screen name="trilha/[id]" options={detailHeader} />
         <Stack.Screen name="curso/[id]" options={detailHeader} />
         <Stack.Screen name="aula/[id]" options={detailHeader} />
@@ -80,7 +81,7 @@ function RootNavigator() {
         <Stack.Screen name="escudo/[id]" options={detailHeader} />
         <Stack.Screen name="post/[id]" options={detailHeader} />
         <Stack.Screen name="diagnostico" options={detailHeader} />
-        <Stack.Screen name="checkin" options={{ ...detailHeader, presentation: 'modal' }} />
+        <Stack.Screen name="checkin" options={detailHeader} />
         <Stack.Screen name="evento" options={{ ...detailHeader, presentation: 'modal' }} />
         <Stack.Screen name="privacidade" options={detailHeader} />
         <Stack.Screen name="foco" options={detailHeader} />
@@ -89,6 +90,13 @@ function RootNavigator() {
         <Stack.Screen name="lembretes" options={detailHeader} />
         <Stack.Screen name="favoritos" options={detailHeader} />
         <Stack.Screen name="certificado/[id]" options={detailHeader} />
+        <Stack.Screen name="socorro" options={{ ...detailHeader, presentation: 'modal' }} />
+        <Stack.Screen name="publicar" options={{ ...detailHeader, presentation: 'modal' }} />
+        <Stack.Screen name="bondade" options={detailHeader} />
+        <Stack.Screen name="conselheiros" options={detailHeader} />
+        <Stack.Screen name="conselheiro" options={detailHeader} />
+        <Stack.Screen name="conselho/novo" options={{ ...detailHeader, presentation: 'modal' }} />
+        <Stack.Screen name="conselho/[id]" options={detailHeader} />
       </Stack.Protected>
     </Stack>
   );

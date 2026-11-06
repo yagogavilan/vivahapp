@@ -1,6 +1,7 @@
 import { requireSupabase } from '../lib/supabase';
 import type { Api, Catalog, ProfilePatch, SessionUser } from './api';
 import type {
+  AdviceRequest,
   Activity,
   AgendaEvent,
   Checkin,
@@ -39,10 +40,36 @@ const toPost = (r: Row): Post => ({
   channel: r.channel,
   authorId: r.author_id,
   authorName: r.author_name,
+  authorLevel: r.author_level ?? 1,
   body: r.body,
+  kind: r.kind ?? 'desabafo',
+  feeling: r.feeling ?? null,
   createdAt: r.created_at,
   commentCount: r.comment_count ?? 0,
+  reactions: r.reactions ?? {},
+  myReactions: r.my_reactions ?? [],
+  thanksCount: r.thanks_count ?? 0,
+  iThanked: Boolean(r.i_thanked),
 });
+
+const toAdvice = (r: Row): AdviceRequest => ({
+  id: r.id,
+  requesterId: r.requester_id,
+  requesterName: r.requester_name,
+  counselorId: r.counselor_id,
+  counselorName: r.counselor_name,
+  topic: r.topic,
+  message: r.message,
+  status: r.status,
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+});
+
+/** Início do dia de hoje em Brasília, em ISO (para o limite diário de agradecimentos). */
+function startOfTodaySP(): string {
+  const sp = new Date(Date.now() - 3 * 3_600_000);
+  return new Date(Date.UTC(sp.getUTCFullYear(), sp.getUTCMonth(), sp.getUTCDate(), 3)).toISOString();
+}
 
 async function currentUserId(): Promise<string> {
   const { data } = await requireSupabase().auth.getUser();
@@ -149,6 +176,7 @@ export const supabaseApi: Api = {
         sort: r.sort,
         inSubscription: r.in_subscription,
         isFree: r.is_free,
+        minKindnessLevel: r.min_kindness_level ?? null,
       })),
       modules: (check(modules) as Row[]).map((r) => ({ id: r.id, courseId: r.course_id, title: r.title, sort: r.sort })),
       lessons: (check(lessons) as Row[]).map((r) => ({
@@ -246,8 +274,8 @@ export const supabaseApi: Api = {
     return r ? toPost(r) : null;
   },
 
-  async createPost(channel, body) {
-    check(await requireSupabase().from('posts').insert({ channel, body: body.trim() }));
+  async createPost(channel, body, kind = 'desabafo', feeling = null) {
+    check(await requireSupabase().from('posts').insert({ channel, body: body.trim(), kind, feeling }));
   },
 
   async deletePost(id) {
@@ -256,20 +284,119 @@ export const supabaseApi: Api = {
 
   async getComments(postId): Promise<Comment[]> {
     const rows = check(
-      await requireSupabase().from('comments').select('*').eq('post_id', postId).eq('hidden', false).order('created_at'),
+      await requireSupabase().from('comments_feed').select('*').eq('post_id', postId).order('created_at'),
     ) as Row[];
     return rows.map((r) => ({
       id: r.id,
       postId: r.post_id,
       authorId: r.author_id,
       authorName: r.author_name,
+      authorLevel: r.author_level ?? 1,
       body: r.body,
       createdAt: r.created_at,
+      thanksCount: r.thanks_count ?? 0,
+      iThanked: Boolean(r.i_thanked),
     }));
   },
 
   async createComment(postId, body) {
     check(await requireSupabase().from('comments').insert({ post_id: postId, body: body.trim() }));
+  },
+
+  async setReaction(postId, kind, on) {
+    const sb = requireSupabase();
+    if (on) {
+      const { error } = await sb.from('post_reactions').upsert(
+        { post_id: postId, user_id: await currentUserId(), kind },
+        { onConflict: 'post_id,user_id,kind', ignoreDuplicates: true },
+      );
+      if (error) throw new Error(error.message);
+    } else {
+      check(await sb.from('post_reactions').delete().eq('post_id', postId).eq('kind', kind).eq('user_id', await currentUserId()));
+    }
+  },
+
+  async thank(target) {
+    const column = target.type === 'post' ? 'post_id' : target.type === 'comment' ? 'comment_id' : 'advice_id';
+    const row: Record<string, string> = {};
+    row[column] = target.id;
+    check(await requireSupabase().from('thanks').insert(row as never));
+  },
+
+  async report(targetType, targetId, reason) {
+    check(await requireSupabase().from('reports').insert({ target_type: targetType, target_id: targetId, reason }));
+  },
+
+  async getMyKindness() {
+    const sb = requireSupabase();
+    const me = await currentUserId();
+    const [stats, level, given] = await Promise.all([
+      sb.rpc('kindness_stats', { p_user: me }).single(),
+      sb.rpc('kindness_level', { p_user: me }),
+      sb.from('thanks').select('id', { count: 'exact', head: true }).eq('giver_id', me).gte('created_at', startOfTodaySP()),
+    ]);
+    const s = check(stats) as Row;
+    return { points: s?.points ?? 0, givers: s?.givers ?? 0, level: (check(level) as number) ?? 1, givenToday: given.count ?? 0 };
+  },
+
+  async getRewardClaims() {
+    const rows = check(await requireSupabase().from('reward_claims').select('*')) as Row[];
+    return rows.map((r) => ({ rewardId: r.reward_id, status: r.status, createdAt: r.created_at }));
+  },
+
+  async claimReward(rewardId) {
+    check(await requireSupabase().from('reward_claims').insert({ reward_id: rewardId }));
+  },
+
+  async listCounselors() {
+    const rows = check(await requireSupabase().rpc('list_counselors')) as Row[];
+    return rows.map((r) => ({ userId: r.user_id, name: r.display_name, bio: r.bio, topics: r.topics ?? [], level: r.level }));
+  },
+
+  async getMyCounselorProfile() {
+    const me = await currentUserId();
+    const r = check(await requireSupabase().from('counselors').select('*').eq('user_id', me).maybeSingle()) as Row | null;
+    return r ? { bio: r.bio, topics: r.topics ?? [], isOpen: r.is_open } : null;
+  },
+
+  async saveCounselorProfile(p) {
+    const me = await currentUserId();
+    check(
+      await requireSupabase().from('counselors').upsert({
+        user_id: me,
+        bio: p.bio.trim(),
+        topics: p.topics,
+        is_open: p.isOpen,
+        code_accepted_at: new Date().toISOString(),
+      }),
+    );
+  },
+
+  async getAdviceRequests() {
+    const rows = check(await requireSupabase().from('advice_requests').select('*').order('updated_at', { ascending: false })) as Row[];
+    return rows.map(toAdvice);
+  },
+
+  async createAdviceRequest(counselorId, topic, message) {
+    const r = check(
+      await requireSupabase().from('advice_requests').insert({ counselor_id: counselorId, topic: topic.trim(), message: message.trim() }).select('id').single(),
+    ) as Row;
+    return r.id as string;
+  },
+
+  async setAdviceStatus(id, status) {
+    check(await requireSupabase().from('advice_requests').update({ status }).eq('id', id));
+  },
+
+  async getAdviceMessages(requestId) {
+    const rows = check(
+      await requireSupabase().from('advice_messages').select('*').eq('request_id', requestId).order('created_at'),
+    ) as Row[];
+    return rows.map((r) => ({ id: r.id, requestId: r.request_id, senderId: r.sender_id, body: r.body, createdAt: r.created_at }));
+  },
+
+  async sendAdviceMessage(requestId, body) {
+    check(await requireSupabase().from('advice_messages').insert({ request_id: requestId, body: body.trim() }));
   },
 
   async getAgenda(): Promise<AgendaEvent[]> {
@@ -330,6 +457,10 @@ export const supabaseApi: Api = {
     ) as Row[];
     return rows.map((r) => ({
       day: r.day,
+      trackId: r.track_id ?? 'aquecimento',
+      answers: r.answers ?? {},
+      feeling: r.feeling ?? null,
+      alertLevel: r.alert_level ?? 'bem',
       mood: r.mood,
       energy: r.energy,
       sleepHours: Number(r.sleep_hours),
@@ -344,6 +475,10 @@ export const supabaseApi: Api = {
       await requireSupabase().from('checkins').upsert({
         user_id,
         day: c.day,
+        track_id: c.trackId,
+        answers: c.answers,
+        feeling: c.feeling,
+        alert_level: c.alertLevel,
         mood: c.mood,
         energy: c.energy,
         sleep_hours: c.sleepHours,

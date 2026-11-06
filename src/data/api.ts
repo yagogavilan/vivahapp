@@ -1,4 +1,15 @@
 import type {
+  AdviceMessage,
+  AdviceRequest,
+  AdviceStatus,
+  Counselor,
+  CounselorProfile,
+  Feeling,
+  KindnessSummary,
+  PostKind,
+  ReactionKind,
+  RewardClaim,
+  ThankTarget,
   Activity,
   ActivityKind,
   AgendaEvent,
@@ -62,10 +73,27 @@ export interface Api {
 
   getPosts(channel: string): Promise<Post[]>;
   getPost(id: string): Promise<Post | null>;
-  createPost(channel: string, body: string): Promise<void>;
+  createPost(channel: string, body: string, kind?: PostKind, feeling?: Feeling | null): Promise<void>;
   deletePost(id: string): Promise<void>;
   getComments(postId: string): Promise<Comment[]>;
   createComment(postId: string, body: string): Promise<void>;
+  setReaction(postId: string, kind: ReactionKind, on: boolean): Promise<void>;
+  /** "Obrigado": quem recebe e quantos pontos vale, o servidor decide. */
+  thank(target: ThankTarget): Promise<void>;
+  report(targetType: 'post' | 'comment' | 'advice' | 'user', targetId: string, reason: string): Promise<void>;
+
+  getMyKindness(): Promise<KindnessSummary>;
+  getRewardClaims(): Promise<RewardClaim[]>;
+  claimReward(rewardId: string): Promise<void>;
+
+  listCounselors(): Promise<Counselor[]>;
+  getMyCounselorProfile(): Promise<CounselorProfile | null>;
+  saveCounselorProfile(profile: CounselorProfile): Promise<void>;
+  getAdviceRequests(): Promise<AdviceRequest[]>;
+  createAdviceRequest(counselorId: string, topic: string, message: string): Promise<string>;
+  setAdviceStatus(id: string, status: AdviceStatus): Promise<void>;
+  getAdviceMessages(requestId: string): Promise<AdviceMessage[]>;
+  sendAdviceMessage(requestId: string, body: string): Promise<void>;
 
   getAgenda(): Promise<AgendaEvent[]>;
   createAgendaEvent(event: Omit<AgendaEvent, 'id'>): Promise<void>;

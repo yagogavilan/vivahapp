@@ -30,6 +30,8 @@ export interface Course {
   inSubscription: boolean;
   /** Aberto para qualquer pessoa com conta (Área de Aquecimento). */
   isFree: boolean;
+  /** Conteúdo exclusivo liberado pelo nível de bondade (não é vendido). */
+  minKindnessLevel: number | null;
 }
 
 export interface Module {
@@ -90,14 +92,29 @@ export interface EscudoAudio {
   durationMin: number;
 }
 
+export type Feeling = 'ansiedade' | 'tristeza' | 'cansaco' | 'sobrecarga' | 'irritacao' | 'calma' | 'animo';
+
+/** Pedir apoio, desabafar, contar uma conquista ou dar uma dica. */
+export type PostKind = 'apoio' | 'desabafo' | 'conquista' | 'dica';
+
+export type ReactionKind = 'like' | 'abraco' | 'forca' | 'parabens' | 'tocou';
+
 export interface Post {
   id: string;
   channel: string;
   authorId: string;
   authorName: string;
+  /** Nível de bondade de quem escreveu (99 = equipe Vivah). */
+  authorLevel: number;
   body: string;
+  kind: PostKind;
+  feeling: Feeling | null;
   createdAt: string;
   commentCount: number;
+  reactions: Partial<Record<ReactionKind, number>>;
+  myReactions: ReactionKind[];
+  thanksCount: number;
+  iThanked: boolean;
 }
 
 export interface Comment {
@@ -105,6 +122,62 @@ export interface Comment {
   postId: string;
   authorId: string;
   authorName: string;
+  authorLevel: number;
+  body: string;
+  createdAt: string;
+  thanksCount: number;
+  iThanked: boolean;
+}
+
+export type ThankTarget = { type: 'post' | 'comment' | 'advice'; id: string };
+
+export interface KindnessSummary {
+  points: number;
+  givers: number;
+  level: number;
+  /** Agradecimentos que eu já dei hoje (limite diário). */
+  givenToday: number;
+}
+
+export interface RewardClaim {
+  rewardId: string;
+  status: 'solicitado' | 'enviado' | 'entregue';
+  createdAt: string;
+}
+
+export interface Counselor {
+  userId: string;
+  name: string;
+  bio: string;
+  topics: string[];
+  level: number;
+}
+
+export interface CounselorProfile {
+  bio: string;
+  topics: string[];
+  isOpen: boolean;
+}
+
+export type AdviceStatus = 'pendente' | 'aceito' | 'recusado' | 'encerrado';
+
+export interface AdviceRequest {
+  id: string;
+  requesterId: string;
+  requesterName: string;
+  counselorId: string;
+  counselorName: string;
+  topic: string;
+  message: string;
+  status: AdviceStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdviceMessage {
+  id: string;
+  requestId: string;
+  senderId: string;
   body: string;
   createdAt: string;
 }
@@ -143,8 +216,15 @@ export interface DiagnosticResult {
   recommendedTrackId: string;
 }
 
+export type AlertLevel = 'bem' | 'atencao' | 'critico';
+
 export interface Checkin {
   day: string;
+  /** Trilha do check-in ('aquecimento' na área grátis). */
+  trackId: string;
+  answers: Record<string, number | number[] | string>;
+  feeling: Feeling | null;
+  alertLevel: AlertLevel;
   mood: number;
   energy: number;
   sleepHours: number;
@@ -159,6 +239,8 @@ export interface Preferences {
   liveReminders?: boolean;
   /** Mostrar a sequência de dias na tela Hoje. */
   showStreak?: boolean;
+  /** Última trilha (espaço) aberta, destacada na escolha de trilha. */
+  lastSpace?: string;
 }
 
 export interface Profile {

@@ -5,9 +5,11 @@ import { useSession } from '@/auth/session';
 import { CheckinStrip, DiagnosticBars } from '@/components/charts';
 import { Button, Card, Icon, type IconName, LinkText, Row, Screen, Txt } from '@/components/ui';
 import { WeekStrip } from '@/components/engagement';
-import { useCheckins, useLatestDiagnostic, useLibrary, useProgress, useStreak } from '@/data/hooks';
+import { useCheckins, useKindness, useLatestDiagnostic, useLibrary, useProgress, useStreak } from '@/data/hooks';
 import { formatShortDate } from '@/domain/dates';
 import { confirm } from '@/lib/dialogs';
+import { useSpace } from '@/lib/space-context';
+import { LevelBadge } from '@/components/feeling';
 import { colors, space } from '@/theme';
 
 function MenuItem({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
@@ -24,6 +26,8 @@ function MenuItem({ icon, label, onPress }: { icon: IconName; label: string; onP
 
 export default function Perfil() {
   const { profile, user, signOut } = useSession();
+  const sp = useSpace();
+  const kindness = useKindness();
   const library = useLibrary();
   const diagnostic = useLatestDiagnostic();
   const checkins = useCheckins(14);
@@ -36,9 +40,12 @@ export default function Perfil() {
   return (
     <Screen refreshing={library.isRefetching} onRefresh={library.refetch}>
       <View style={{ gap: space.xs }}>
-        <Txt variant="eyebrow">Perfil</Txt>
+        <Txt variant="eyebrow">Perfil · {sp.title}</Txt>
         <Txt variant="hero">{profile?.fullName || 'Aluno Vivah'}</Txt>
         <Txt>{user?.email}</Txt>
+        <View style={{ alignSelf: 'flex-start', marginTop: space.xs }}>
+          <LevelBadge level={kindness.data?.level ?? 1} showSeed />
+        </View>
       </View>
 
       {streak ? (
@@ -90,7 +97,7 @@ export default function Perfil() {
       <Card style={{ gap: space.md }}>
         <Row style={{ justifyContent: 'space-between' }}>
           <Txt variant="heading">Minha evolução</Txt>
-          {profile?.healthConsentAt ? <LinkText label="Check-in" onPress={() => router.push('/checkin')} /> : null}
+          {profile?.healthConsentAt ? <LinkText label="Check-in" onPress={() => router.push({ pathname: '/checkin', params: { track: sp.id } })} /> : null}
         </Row>
         {profile?.healthConsentAt ? (
           <CheckinStrip checkins={checkins.data ?? []} />
@@ -120,6 +127,9 @@ export default function Perfil() {
       </Card>
 
       <Card style={{ gap: 0 }}>
+        <MenuItem icon="repeat" label="Trocar de trilha" onPress={() => router.push('/')} />
+        <MenuItem icon="award" label="Níveis de bondade e prêmios" onPress={() => router.push('/bondade')} />
+        <MenuItem icon="star" label="Conselheiros" onPress={() => router.push('/conselheiros')} />
         <MenuItem icon="heart" label="Favoritos" onPress={() => router.push('/favoritos')} />
         <MenuItem icon="bell" label="Lembretes e sequência" onPress={() => router.push('/lembretes')} />
         <MenuItem icon="target" label="Bloco de foco" onPress={() => router.push('/foco')} />

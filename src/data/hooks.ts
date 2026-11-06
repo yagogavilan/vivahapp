@@ -5,7 +5,23 @@ import { useSession } from '../auth/session';
 import { courseState, type CourseState } from '../domain/access';
 import { computeStreak } from '../domain/streak';
 import { api } from './index';
-import type { ActivityKind, AgendaEvent, Checkin, Course, Favorite, LifeArea, Track } from './types';
+import { dayKey } from '../domain/dates';
+import type {
+  ActivityKind,
+  AdviceStatus,
+  AgendaEvent,
+  Checkin,
+  CounselorProfile,
+  Course,
+  Favorite,
+  Feeling,
+  LifeArea,
+  Post,
+  PostKind,
+  ReactionKind,
+  ThankTarget,
+  Track,
+} from './types';
 
 /** Chaves de cache por usuário, para nunca misturar dados de contas diferentes. */
 function useKey(...parts: unknown[]) {
@@ -95,14 +111,121 @@ export function useCommunityMutations() {
   const refresh = () => qc.invalidateQueries({ queryKey: base });
   return {
     createPost: useMutation({
-      mutationFn: async (v: { channel: string; body: string }) => {
-        await api.createPost(v.channel, v.body);
+      mutationFn: async (v: { channel: string; body: string; kind?: PostKind; feeling?: Feeling | null }) => {
+        await api.createPost(v.channel, v.body, v.kind, v.feeling);
         await api.logActivity('post', v.channel).catch(() => undefined);
       },
       onSuccess: refresh,
     }),
     deletePost: useMutation({ mutationFn: (id: string) => api.deletePost(id), onSuccess: refresh }),
-    createComment: useMutation({ mutationFn: (v: { postId: string; body: string }) => api.createComment(v.postId, v.body), onSuccess: refresh }),
+    createComment: useMutation({
+      mutationFn: async (v: { postId: string; body: string }) => {
+        await api.createComment(v.postId, v.body);
+        await api.logActivity('post', v.postId).catch(() => undefined);
+      },
+      onSuccess: refresh,
+    }),
+    thank: useMutation({ mutationFn: (t: ThankTarget) => api.thank(t), onSuccess: refresh }),
+    report: useMutation({
+      mutationFn: (v: { type: 'post' | 'comment' | 'advice' | 'user'; id: string; reason: string }) => api.report(v.type, v.id, v.reason),
+    }),
+  };
+}
+
+/** Curtir e reagir com resposta imediata na tela (otimista). */
+export function useReact(channel: string) {
+  const qc = useQueryClient();
+  const key = useKey('posts', channel);
+  const base = useKey();
+  return useMutation({
+    mutationFn: (v: { postId: string; kind: ReactionKind; on: boolean }) => api.setReaction(v.postId, v.kind, v.on),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<Post[]>(key);
+      const patch = (p: Post): Post => {
+        if (p.id !== v.postId) return p;
+        const count = (p.reactions[v.kind] ?? 0) + (v.on ? 1 : -1);
+        return {
+          ...p,
+          reactions: { ...p.reactions, [v.kind]: Math.max(0, count) },
+          myReactions: v.on ? [...p.myReactions.filter((k) => k !== v.kind), v.kind] : p.myReactions.filter((k) => k !== v.kind),
+        };
+      };
+      if (prev) qc.setQueryData(key, prev.map(patch));
+      const single = qc.getQueryData<Post | null>([...base, 'post', v.postId]);
+      if (single) qc.setQueryData([...base, 'post', v.postId], patch(single));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(key, ctx.prev),
+    onSettled: () => qc.invalidateQueries({ queryKey: base }),
+  });
+}
+
+export function useKindness() {
+  const key = useKey('kindness');
+  return useQuery({ queryKey: key, queryFn: () => api.getMyKindness() });
+}
+
+export function useRewardClaims() {
+  const key = useKey('reward-claims');
+  return useQuery({ queryKey: key, queryFn: () => api.getRewardClaims() });
+}
+
+export function useClaimReward() {
+  const qc = useQueryClient();
+  const key = useKey('reward-claims');
+  return useMutation({ mutationFn: (rewardId: string) => api.claimReward(rewardId), onSuccess: () => qc.invalidateQueries({ queryKey: key }) });
+}
+
+export function useCounselors() {
+  const key = useKey('counselors');
+  return useQuery({ queryKey: key, queryFn: () => api.listCounselors() });
+}
+
+export function useMyCounselorProfile() {
+  const key = useKey('my-counselor');
+  return useQuery({ queryKey: key, queryFn: () => api.getMyCounselorProfile() });
+}
+
+export function useSaveCounselorProfile() {
+  const qc = useQueryClient();
+  const base = useKey();
+  return useMutation({ mutationFn: (p: CounselorProfile) => api.saveCounselorProfile(p), onSuccess: () => qc.invalidateQueries({ queryKey: base }) });
+}
+
+export function useAdviceRequests() {
+  const key = useKey('advice');
+  return useQuery({ queryKey: key, queryFn: () => api.getAdviceRequests(), refetchInterval: 20_000 });
+}
+
+export function useAdviceMessages(requestId: string | undefined) {
+  const key = useKey('advice-messages', requestId);
+  return useQuery({ queryKey: key, queryFn: () => api.getAdviceMessages(requestId!), enabled: Boolean(requestId), refetchInterval: 10_000 });
+}
+
+export function useAdviceMutations() {
+  const qc = useQueryClient();
+  const base = useKey();
+  const refresh = () => qc.invalidateQueries({ queryKey: base });
+  return {
+    request: useMutation({
+      mutationFn: (v: { counselorId: string; topic: string; message: string }) => api.createAdviceRequest(v.counselorId, v.topic, v.message),
+      onSuccess: refresh,
+    }),
+    setStatus: useMutation({ mutationFn: (v: { id: string; status: AdviceStatus }) => api.setAdviceStatus(v.id, v.status), onSuccess: refresh }),
+    send: useMutation({ mutationFn: (v: { requestId: string; body: string }) => api.sendAdviceMessage(v.requestId, v.body), onSuccess: refresh }),
+  };
+}
+
+/** Check-in de hoje nesta trilha (ou undefined). */
+export function useTodayCheckin(trackId: string) {
+  const checkins = useCheckins(30);
+  const today = dayKey(new Date());
+  return {
+    ...checkins,
+    today: checkins.data?.find((c) => c.day === today && c.trackId === trackId),
+    /** Sentimento mais recente de hoje em qualquer trilha (para o filtro da comunidade). */
+    feelingToday: checkins.data?.find((c) => c.day === today && c.feeling)?.feeling ?? null,
   };
 }
 
@@ -148,9 +271,16 @@ export function useCheckins(days = 14) {
 export function useSaveCheckin() {
   const qc = useQueryClient();
   const base = useKey('checkins');
+  const activity = useKey('activity');
   return useMutation({
-    mutationFn: (c: Checkin) => api.saveCheckin(c),
-    onSuccess: () => qc.invalidateQueries({ queryKey: base }),
+    mutationFn: async (c: Checkin) => {
+      await api.saveCheckin(c);
+      await api.logActivity('checkin', c.trackId).catch(() => undefined);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: base });
+      qc.invalidateQueries({ queryKey: activity });
+    },
   });
 }
 

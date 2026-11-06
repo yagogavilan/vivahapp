@@ -31,7 +31,8 @@ export function CheckinStrip({ checkins, days = 14 }: { checkins: Checkin[]; day
     day: d,
     c: checkins.find((x) => x.day === d),
   }));
-  const withData = checkins.filter((c) => series.some((s) => s.day === c.day));
+  // Pode haver um check-in por trilha no mesmo dia: conta um por dia.
+  const withData = series.map((s) => s.c).filter((c): c is Checkin => Boolean(c));
   const avg = (f: (c: Checkin) => number) =>
     withData.length ? (withData.reduce((s, c) => s + f(c), 0) / withData.length).toFixed(1).replace('.', ',') : '—';
 

@@ -14,6 +14,18 @@ Este é o **MVP de 01/12/2026**:
 - **Check-in de humor e sono:** só com consentimento (dado de saúde, LGPD art. 11).
 - **Privacidade:** o aluno exporta os próprios dados e apaga a conta dentro do app, como as lojas exigem.
 
+### App por trilha e comunidade (versão 3)
+
+- **Escolha da trilha primeiro:** a tela inicial mostra as trilhas do aluno, a Área de Aquecimento (grátis) e as outras trilhas com cadeado (levam à vitrine). Ao entrar, o app se molda à trilha: **Hoje, Cursos, Comunidade, Agenda e Perfil** só dela. O seletor no topo troca de trilha.
+- **Check-in diário por trilha:** perguntas comuns (humor, sentimento, energia, sono) e as da trilha (Respira: ansiedade 0–10, pensamentos acelerados e sintomas no corpo; Ritmo: sobrecarga; Eleva: peso do trabalho; Prospera: preocupação com dinheiro; Move: dor; Nutre: alimentação). Uma pergunta por tela.
+- **Resumo com alertas e socorro na hora:** se o estado é crítico (ex.: ansiedade 8+), um exercício guiado começa sozinho (respiração 4-6 e aterramento 5-4-3-2-1), depois o aluno marca de 0 a 10 como ficou. Alertas com CVV 188 e SAMU 192 quando cabe. Botão **Socorro** sempre no topo. Regras em `src/domain/checkin-protocol.ts`; exercícios em `src/domain/exercises.ts` (o campo `audioUrl` recebe a versão narrada pelo Edmilson).
+- **Hoje limpo, com jornada:** check-in primeiro e depois quatro passos (check-in, Escudo, aula do dia, comunidade), o curso atual e a próxima live.
+- **Comunidade em feed:** tipo do post (pedir apoio, desabafo, conquista, dica), sentimento, curtir, reagir com emojis, comentar, filtros (pedem apoio, sem resposta, mesmo sentimento que você hoje), denúncia e aviso de "ninguém respondeu ainda".
+- **Agradecer, níveis e prêmios:** o obrigado vale pontos (10; 20 quando quem pediu ajuda agradece; 30 no conselho). Oito níveis: Semente, Mão Amiga, Ombro Amigo, Coração Gentil, Ponte, Farol, Porto Seguro e Luz Vivah. Cada um exige pontos **e** pessoas diferentes; 10 agradecimentos por dia; da mesma pessoa contam 3 por mês. Prêmios: selo, aulas exclusivas, broche, copo, camiseta, mentoria e convite para imersão (`src/domain/kindness.ts`, que também gera o seed).
+- **Conselheiros:** a partir do nível Farol, com código de conduta e Formação de Conselheiro. Pedido, aceite, conversa dentro do app, encerrar, agradecer e denunciar.
+
+Migração `20261106000000_trilha_comunidade.sql`: check-in por trilha, reações, agradecimentos (o banco decide quem recebe e quantos pontos), níveis, prêmios pedidos, cursos exclusivos por nível, conselheiros, conversas e denúncias. Tudo com RLS e testes.
+
 ### Engajamento (versão 2, baseada em referências de mercado)
 
 Inspirado em Headspace, Duolingo, Calm e no player da Hotmart (e nas reclamações dos alunos sobre ele):
@@ -126,11 +138,13 @@ O catálogo inicial (trilhas, cursos, aulas, produtos, lives, Escudo e diagnóst
 
 ```
 src/app/                 telas (Expo Router)
-  (tabs)/                Hoje · Trilhas · Comunidade · Agenda · Perfil
+  index                  escolha da trilha (primeira tela)
+  t/[track]/             espaço da trilha: Hoje · Cursos · Comunidade · Agenda · Perfil
   trilha/ curso/ aula/   trilha → curso → aula
   live/ escudo/ post/    Área de Aquecimento e comunidade
   entrar, boas-vindas, diagnostico, checkin, evento, privacidade
   foco, buscar, conquistas, lembretes, favoritos, certificado/
+  checkin, socorro, publicar, bondade, conselheiros, conselheiro, conselho/
 src/components/          componentes visuais (ui, players, vitrine, painel bloqueado)
 src/data/                catálogo, tipos, API (Supabase e demonstração) e hooks
 src/domain/              regras sem tela: acesso, datas de Brasília, agenda, diagnóstico,
