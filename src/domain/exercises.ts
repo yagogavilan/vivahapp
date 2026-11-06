@@ -4,10 +4,15 @@
  */
 
 export interface BreathPhase {
+  /** Uma palavra, em letra grande (Inspire, Segure, Solte). */
   label: string;
+  /** Como fazer, em letra pequena (pelo nariz, pela boca). */
+  how?: string;
   seconds: number;
   /** Escala do círculo ao fim da fase (0 = vazio, 1 = cheio). */
   to: 0 | 1;
+  /** Som que toca no início da fase. */
+  cue: 'inspire' | 'segure' | 'solte';
 }
 
 export interface ExerciseStep {
@@ -33,29 +38,61 @@ export const EXERCISES: Exercise[] = [
   {
     id: 'respiracao',
     title: 'Respiração 4-6',
-    subtitle: 'Soltar o ar mais devagar do que puxa acalma o coração.',
+    subtitle: 'Soltar o ar mais devagar acalma o coração.',
     durationLabel: '2 min',
     kind: 'breath',
     phases: [
-      { label: 'Puxe o ar pelo nariz', seconds: 4, to: 1 },
-      { label: 'Solte devagar pela boca', seconds: 6, to: 0 },
+      { label: 'Inspire', how: 'pelo nariz', seconds: 4, to: 1, cue: 'inspire' },
+      { label: 'Solte', how: 'devagar, pela boca', seconds: 6, to: 0, cue: 'solte' },
     ],
-    cycles: 10,
+    cycles: 12,
+    audioUrl: null,
+  },
+  {
+    // Suspiro cíclico: duas puxadas pelo nariz e uma soltada longa. No estudo de
+    // Balban et al. (Cell Reports Medicine, 2023), 5 minutos por dia melhoraram o
+    // humor e baixaram a frequência respiratória mais do que a meditação.
+    id: 'suspiro',
+    title: 'Suspiro cíclico',
+    subtitle: 'Duas puxadas e uma soltada longa.',
+    durationLabel: '3 min',
+    kind: 'breath',
+    phases: [
+      { label: 'Inspire', how: 'pelo nariz', seconds: 3, to: 1, cue: 'inspire' },
+      { label: 'Mais um pouco', how: 'encha o pulmão', seconds: 1, to: 1, cue: 'segure' },
+      { label: 'Solte', how: 'bem devagar, pela boca', seconds: 7, to: 0, cue: 'solte' },
+    ],
+    cycles: 16,
+    audioUrl: null,
+  },
+  {
+    // Coerência: cerca de 6 respirações por minuto, ritmo usado no biofeedback de
+    // variabilidade da frequência cardíaca.
+    id: 'coerencia',
+    title: 'Coerência cardíaca',
+    subtitle: '6 respirações por minuto.',
+    durationLabel: '5 min',
+    kind: 'breath',
+    phases: [
+      { label: 'Inspire', how: 'pelo nariz', seconds: 5, to: 1, cue: 'inspire' },
+      { label: 'Solte', how: 'pelo nariz ou pela boca', seconds: 5, to: 0, cue: 'solte' },
+    ],
+    cycles: 30,
     audioUrl: null,
   },
   {
     id: 'caixa',
     title: 'Respiração em caixa',
-    subtitle: 'Quatro tempos iguais para organizar a respiração.',
+    subtitle: 'Quatro tempos iguais.',
     durationLabel: '2 min',
     kind: 'breath',
     phases: [
-      { label: 'Puxe o ar', seconds: 4, to: 1 },
-      { label: 'Segure', seconds: 4, to: 1 },
-      { label: 'Solte o ar', seconds: 4, to: 0 },
-      { label: 'Segure', seconds: 4, to: 0 },
+      { label: 'Inspire', seconds: 4, to: 1, cue: 'inspire' },
+      { label: 'Segure', seconds: 4, to: 1, cue: 'segure' },
+      { label: 'Solte', seconds: 4, to: 0, cue: 'solte' },
+      { label: 'Segure', seconds: 4, to: 0, cue: 'segure' },
     ],
-    cycles: 6,
+    cycles: 8,
     audioUrl: null,
   },
   {
@@ -124,10 +161,21 @@ export function exerciseById(id: string): Exercise | undefined {
 /** Exercícios sugeridos no botão "Socorro" de cada trilha. */
 export const SOS_BY_TRACK: Record<string, string[]> = {
   aquecimento: ['respiracao', 'aterramento', 'relaxamento'],
-  respira: ['respiracao', 'aterramento', 'relaxamento', 'caixa'],
+  respira: ['respiracao', 'suspiro', 'aterramento', 'caixa', 'coerencia', 'relaxamento'],
   ritmo: ['descarrego', 'respiracao', 'caixa'],
   eleva: ['controle', 'respiracao', 'caixa'],
   prospera: ['controle', 'respiracao', 'aterramento'],
   move: ['relaxamento', 'respiracao'],
   nutre: ['respiracao', 'aterramento'],
 };
+
+/** Duração de um ciclo, em segundos. */
+export function cycleSeconds(e: Exercise): number {
+  return (e.phases ?? []).reduce((s, p) => s + p.seconds, 0);
+}
+
+/** Quantos ciclos cabem em `minutes` (pelo menos 1). */
+export function cyclesFor(e: Exercise, minutes: number): number {
+  const c = cycleSeconds(e);
+  return c ? Math.max(1, Math.round((minutes * 60) / c)) : 1;
+}

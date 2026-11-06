@@ -85,7 +85,7 @@ export default function Cursos() {
       <View style={{ gap: 4 }}>
         <Txt variant="eyebrow">Cursos · {sp.title}</Txt>
         <Txt variant="hero">{subscription === 'open' ? 'Seus cursos' : 'Os cursos da trilha'}</Txt>
-        <Txt variant="small">As aulas seguem uma ordem: a próxima abre quando você conclui a anterior.</Txt>
+        <Row gap={6}><Icon name="list" size={14} color={colors.textSubtle} /><Txt variant="small">Em ordem: cada aula abre a próxima</Txt></Row>
       </View>
 
       {subscription !== 'open' && sp.track ? <TrackSubscribePanel track={sp.track} /> : null}
@@ -124,7 +124,7 @@ export default function Cursos() {
         <View style={{ gap: space.md }}>
           <View style={{ gap: 2 }}>
             <Txt variant="title">Low tickets da {sp.title}</Txt>
-            <Txt variant="small">Aulas curtas, planilhas e ferramentas vendidas à parte. Ficam fora da sequência: use quando quiser.</Txt>
+            <Txt variant="small">Aulas curtas, planilhas e ferramentas</Txt>
           </View>
           <View style={styles.lowGrid}>
             {lows.map((c) => {

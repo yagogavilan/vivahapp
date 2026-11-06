@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { LiveCard } from '@/components/aquecimento';
+import { BreathSession } from '@/components/breath';
+import { MoodPicker } from '@/components/mood';
 import { PanelSummary } from '@/components/panel';
 import { FeelingChip } from '@/components/feeling';
 import { SpaceCover, SpaceHeader } from '@/components/space';
@@ -16,7 +18,9 @@ import {
   useLibrary,
   useLives,
   useProgress,
+  useLogActivity,
   useTodayCheckin,
+  useTrackEntryMutations,
 } from '@/data/hooks';
 import type { Lesson } from '@/data/types';
 import { completion, nextLesson } from '@/domain/access';
@@ -25,11 +29,14 @@ import { dayKey, formatTime, greeting } from '@/domain/dates';
 import { buildJourney, type JourneyStep } from '@/domain/journey';
 import { panelFor } from '@/domain/panels';
 import { evolution, programFor } from '@/domain/programs';
+import { exerciseById } from '@/domain/exercises';
 import { agendaDays, nextLive, todaysEscudo } from '@/domain/schedule';
 import { AQUECIMENTO, trackCourses } from '@/domain/spaces';
 import { tap } from '@/lib/haptics';
 import { useSpace } from '@/lib/space-context';
 import { colors, radius, space } from '@/theme';
+
+const STEP_LABEL: Record<JourneyStep['id'], string> = { checkin: 'Check-in', plano: 'Plano', pratica: 'Prática', fechamento: 'Fechar', comunidade: 'Ajudar' };
 
 const STEP_ICON: Record<JourneyStep['id'], IconName> = {
   checkin: 'heart',
@@ -53,6 +60,8 @@ export default function HojeDaTrilha() {
   const agenda = useAgenda();
   const logs = useDailyLogs(sp.id, 30);
   const checkin = useTodayCheckin(sp.id);
+  const panelMut = useTrackEntryMutations();
+  const logActivity = useLogActivity();
 
   if (library.isPending) return <ScreenSkeleton />;
   if (library.error || !library.data) return <ErrorState error={library.error} onRetry={library.refetch} />;
@@ -91,8 +100,6 @@ export default function HojeDaTrilha() {
   const evo = evolution((logs.data ?? []).filter((l) => l.kind === 'fechamento' && l.score !== null).map((l) => ({ day: l.day, score: l.score! })), today);
   const todayItems = agendaDays(lives.data ?? [], agenda.data ?? [], new Date(), 1)[0]?.items ?? [];
   const reading = checkin.today ? readCheckin(sp.id, checkin.today.answers) : undefined;
-  const planCheck = plan ? program.validate(plan.data) : undefined;
-  const pain = typeof checkin.today?.answers.pain === 'number' ? (checkin.today.answers.pain as number) : undefined;
 
   const go = (route: string, params: Record<string, string> = {}) => {
     tap();
@@ -116,90 +123,63 @@ export default function HojeDaTrilha() {
   const checkinCard = !checkin.today ? (
     <FadeIn>
       <View style={styles.checkinCard}>
-        <Row gap={space.md}>
-          <View style={styles.checkinIcon}><Icon name="heart" size={20} color={colors.coral} /></View>
-          <View style={{ flex: 1 }}>
-            <Txt variant="eyebrow" style={{ color: colors.coral }}>Primeiro passo</Txt>
-            <Txt variant="title" style={{ color: colors.onDark }}>Como você está hoje?</Txt>
-          </View>
-        </Row>
-        <Button label="Fazer meu check-in" icon="arrow-right" onPress={() => go('/checkin')} />
+        <Txt variant="title" style={{ color: colors.onDark }}>Como você está?</Txt>
+        <MoodPicker dark onPick={(mood) => go('/checkin', { mood: String(mood) })} />
       </View>
     </FadeIn>
   ) : (
     <FadeIn>
       <Pressable onPress={() => go('/checkin')} accessibilityRole="button"
         style={[styles.summary, { backgroundColor: reading?.level === 'critico' ? colors.coralSoft : reading?.level === 'atencao' ? '#FCEFC7' : colors.mintSoft }]}>
-        <Row style={{ justifyContent: 'space-between' }}>
-          <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>Check-in de hoje</Txt>
-          <Icon name="chevron-right" size={16} color={colors.textSubtle} />
-        </Row>
-        <Txt variant="heading">{reading?.headline}</Txt>
-        <Row gap={space.sm} style={{ flexWrap: 'wrap' }}>
-          {checkin.today.feeling ? <FeelingChip feeling={checkin.today.feeling} small /> : null}
-          {reading?.metric ? <Txt variant="small">{reading.metric.label} {reading.metric.value}/{reading.metric.max}</Txt> : null}
-          {reading?.alerts.length ? <Txt variant="small">· {reading.alerts.length} {reading.alerts.length === 1 ? 'alerta' : 'alertas'}</Txt> : null}
-        </Row>
+        <Icon name={reading?.level === 'bem' ? 'smile' : reading?.level === 'critico' ? 'alert-triangle' : 'meh'} size={26} color={colors.petrol} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Txt variant="bodyStrong">{reading?.headline}</Txt>
+          <Row gap={space.sm} style={{ flexWrap: 'wrap' }}>
+            {checkin.today.feeling ? <FeelingChip feeling={checkin.today.feeling} small /> : null}
+            {reading?.metric ? <Txt variant="small">{reading.metric.label} {reading.metric.value}/{reading.metric.max}</Txt> : null}
+          </Row>
+        </View>
+        <Icon name="chevron-right" size={18} color={colors.textSubtle} />
       </Pressable>
     </FadeIn>
   );
 
-  const planCard = (
-    <FadeIn delay={60}>
-      <Pressable onPress={() => go('/plano')} accessibilityRole="button" style={[styles.plan, plan && { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Row style={{ justifyContent: 'space-between' }}>
-          <Txt variant="eyebrow" style={{ color: plan ? colors.textSubtle : colors.coralText }}>{plan ? 'Plano do dia' : 'Segundo passo'}</Txt>
-          {planCheck ? (
-            <Row gap={4}>
-              <Icon name={planCheck.perfect ? 'check-circle' : 'alert-circle'} size={14} color={planCheck.perfect ? '#16614F' : '#B07A12'} />
-              <Txt variant="small" style={{ color: planCheck.perfect ? '#16614F' : '#B07A12' }}>
-                {planCheck.perfect ? 'Validado' : `${planCheck.checks.filter((c) => c.level !== 'ok').length} ajustes sugeridos`}
-              </Txt>
-            </Row>
-          ) : null}
-        </Row>
-        <Txt variant="heading">{program.plan.title}</Txt>
-        {plan ? (
-          <Txt variant="small" numberOfLines={2}>{summarizePlan(plan.data)}</Txt>
-        ) : (
-          <>
-            <Txt variant="small">{program.plan.subtitle}</Txt>
-            {pain !== undefined && pain >= 7 && sp.id === 'move' ? <Txt variant="small" style={{ color: colors.coralText }}>Você marcou dor forte no check-in: o plano vai sugerir algo leve.</Txt> : null}
-          </>
-        )}
-      </Pressable>
+  const breath = sp.id === 'respira' ? exerciseById('respiracao') : undefined;
+  const breathCard = breath ? (
+    <FadeIn delay={40}>
+      <BreathSession compact exercise={breath} minutesOptions={[1, 2, 3]}
+        onDone={(minutes) => {
+          panelMut.add.mutate({ trackId: 'respira', metric: 'respiracao', delta: minutes });
+          logActivity.mutate({ kind: 'foco', ref: `respira-hoje-${today}`, minutes });
+        }} />
     </FadeIn>
-  );
+  ) : null;
 
   const journeyCard = (
-    <FadeIn delay={100} style={{ gap: space.md }}>
-      <View style={{ gap: 2 }}>
-        <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>Sua jornada de hoje</Txt>
-        <Txt variant="title">{journey.doneCount === journey.steps.length ? 'Dia completo' : `${journey.doneCount} de ${journey.steps.length} passos`}</Txt>
-      </View>
-      <View>
-        {journey.steps.map((s, i) => {
-          const isNext = journey.next?.id === s.id;
+    <FadeIn delay={100} style={styles.day}>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <Txt variant="title">Seu dia</Txt>
+        <Txt variant="bodyStrong" style={{ color: colors.coralText }}>{journey.doneCount}/{journey.steps.length}</Txt>
+      </Row>
+      <Row style={{ justifyContent: 'space-between' }}>
+        {journey.steps.map((s_) => {
+          const isNext = journey.next?.id === s_.id;
           return (
-            <Pressable key={s.id} onPress={() => openStep(s)} accessibilityRole="button" accessibilityLabel={`${s.title}${s.done ? ', feito' : ''}`}
-              style={({ pressed }) => [styles.step, { opacity: pressed ? 0.8 : 1 }]}>
-              <View style={styles.rail}>
-                <View style={[styles.node, s.done ? styles.nodeDone : isNext ? styles.nodeNext : null]}>
-                  <Icon name={s.done ? 'check' : STEP_ICON[s.id]} size={16} color={s.done ? colors.deep : isNext ? colors.onDark : colors.textSubtle} />
-                </View>
-                {i < journey.steps.length - 1 ? <View style={[styles.line, s.done && { backgroundColor: colors.coral }]} /> : null}
+            <Pressable key={s_.id} onPress={() => openStep(s_)} accessibilityRole="button" accessibilityLabel={`${s_.title}${s_.done ? ', feito' : ''}`}
+              style={({ pressed }) => [styles.stepItem, { opacity: pressed ? 0.7 : 1 }]}>
+              <View style={[styles.node, s_.done ? styles.nodeDone : isNext ? styles.nodeNext : null]}>
+                <Icon name={s_.done ? 'check' : STEP_ICON[s_.id]} size={18} color={s_.done ? colors.deep : isNext ? colors.onDark : colors.textSubtle} />
               </View>
-              <View style={[styles.stepBody, isNext && styles.stepBodyNext]}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Txt variant="bodyStrong" style={s.done ? { color: colors.textSubtle } : undefined}>{s.title}</Txt>
-                  <Txt variant="small" numberOfLines={1}>{s.subtitle}</Txt>
-                </View>
-                {isNext ? <Icon name="arrow-right" size={18} color={colors.coralText} /> : null}
-              </View>
+              <Txt variant="small" style={{ fontSize: 12, color: isNext ? colors.text : colors.textSubtle }} numberOfLines={1}>{STEP_LABEL[s_.id]}</Txt>
             </Pressable>
           );
         })}
-      </View>
+      </Row>
+      {journey.next ? (
+        <Button label={journey.next.title} icon="arrow-right" onPress={() => openStep(journey.next!)} />
+      ) : (
+        <Row gap={6} style={{ justifyContent: 'center' }}><Icon name="award" size={18} color={colors.coralText} /><Txt variant="bodyStrong">Dia completo</Txt></Row>
+      )}
     </FadeIn>
   );
 
@@ -222,11 +202,9 @@ export default function HojeDaTrilha() {
             </View>
           ))}
         </View>
-        <Txt variant="small">
-          {evo.thisWeek === null
-            ? 'Faça o fechamento do dia para começar a medir.'
-            : `Média da semana: ${evo.thisWeek}${evo.delta !== null ? ` (${evo.delta >= 0 ? '+' : ''}${evo.delta} vs semana passada)` : ''}`}
-        </Txt>
+        {evo.thisWeek !== null ? (
+          <Txt variant="small">Média {evo.thisWeek}{evo.delta !== null ? ` · ${evo.delta >= 0 ? '+' : ''}${evo.delta} na semana` : ''}</Txt>
+        ) : null}
       </Pressable>
     </FadeIn>
   );
@@ -242,22 +220,18 @@ export default function HojeDaTrilha() {
     </ScrollView>
   );
 
-  const agendaCard = (
+  const agendaCard = !todayItems.length ? null : (
     <View style={styles.agenda}>
       <Row style={{ justifyContent: 'space-between' }}>
         <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>Na agenda hoje</Txt>
         <LinkText label="Ver agenda" onPress={() => router.push('/agenda')} />
       </Row>
-      {todayItems.length ? (
-        todayItems.slice(0, 4).map((it) => (
-          <Row key={it.key} gap={space.md}>
-            <Txt variant="bodyStrong" style={{ width: 48 }}>{formatTime(it.startsAt)}</Txt>
-            <Txt style={{ flex: 1 }} numberOfLines={1}>{it.title}</Txt>
-          </Row>
-        ))
-      ) : (
-        <Txt variant="small">Nada marcado. Lives salvas e apoios combinados aparecem aqui.</Txt>
-      )}
+      {todayItems.slice(0, 4).map((it) => (
+        <Row key={it.key} gap={space.md}>
+          <Txt variant="bodyStrong" style={{ width: 48 }}>{formatTime(it.startsAt)}</Txt>
+          <Txt style={{ flex: 1 }} numberOfLines={1}>{it.title}</Txt>
+        </Row>
+      ))}
     </View>
   );
 
@@ -278,35 +252,25 @@ export default function HojeDaTrilha() {
       <View style={{ gap: 4 }}>
         <Txt variant="eyebrow">{greeting()}{firstName ? `, ${firstName}` : ''}</Txt>
         <Txt variant="hero">{sp.track?.promise ?? 'Um passo de cada vez.'}</Txt>
-        <Txt variant="small">{program.purpose}</Txt>
       </View>
       <Columns
-        left={<>{checkinCard}{panel ? <FadeIn delay={40}><PanelSummary panel={panel} /></FadeIn> : null}{planCard}{journeyCard}</>}
-        right={<>{evolutionCard}{tools}{agendaCard}{continueCard}{live ? <LiveCard live={live} /> : null}</>}
+        left={<>{checkinCard}{breathCard}{journeyCard}{panel ? <FadeIn delay={40}><PanelSummary panel={panel} /></FadeIn> : null}</>}
+        right={<>{continueCard}{tools}{evolutionCard}{agendaCard}{live ? <LiveCard live={live} /> : null}</>}
       />
     </Screen>
   );
 }
 
-/** Uma linha com o essencial do plano (primeiras respostas). */
-function summarizePlan(data: Record<string, unknown>): string {
-  const parts: string[] = [];
-  for (const v of Object.values(data)) {
-    if (Array.isArray(v)) parts.push(v.filter(Boolean).join(' · '));
-    else if (typeof v === 'string' && v.trim()) parts.push(v.trim());
-    if (parts.join(' · ').length > 90) break;
-  }
-  return parts.filter(Boolean).join(' · ') || 'Toque para ver o plano';
-}
-
 const styles = StyleSheet.create({
-  checkinCard: { backgroundColor: colors.petrol, borderRadius: radius.lg, padding: space.xl, gap: space.lg },
+  checkinCard: { backgroundColor: colors.petrol, borderRadius: radius.lg, padding: space.lg, gap: space.lg },
+  day: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg, gap: space.md },
+  stepItem: { alignItems: 'center', gap: 4, flex: 1 },
   checkinIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
-  summary: { borderRadius: radius.lg, padding: space.lg, gap: space.sm },
+  summary: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.lg, padding: space.lg, gap: space.md },
   plan: { borderRadius: radius.lg, padding: space.lg, gap: space.xs, backgroundColor: colors.coralSoft, borderWidth: 1, borderColor: colors.coralSoft },
   step: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
   rail: { width: 36, alignItems: 'center' },
-  node: { width: 36, height: 36, borderRadius: 18, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  node: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   nodeDone: { backgroundColor: colors.coral, borderColor: colors.coral },
   nodeNext: { backgroundColor: colors.petrol, borderColor: colors.petrol },
   line: { flex: 1, width: 2, backgroundColor: colors.border, marginVertical: 2 },

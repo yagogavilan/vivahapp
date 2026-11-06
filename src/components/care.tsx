@@ -1,9 +1,10 @@
 import { useEffect, useEffectEvent, useState } from 'react';
-import { Animated, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import type { Exercise } from '../domain/exercises';
 import { success, tap } from '../lib/haptics';
 import { colors, fonts, radius, space } from '../theme';
+import { BreathSession } from './breath';
 import { Button, Icon, Row, Txt } from './ui';
 
 /** Telefones de emergência. Sempre visíveis quando o estado está crítico. */
@@ -26,46 +27,6 @@ export function EmergencyCard({ compact = false }: { compact?: boolean }) {
           <Txt variant="bodyStrong" style={{ color: '#fff', fontSize: 14 }}>SAMU 192</Txt>
         </Pressable>
       </Row>
-    </View>
-  );
-}
-
-/** Respiração guiada: o círculo enche e esvazia no ritmo do exercício. */
-function BreathPlayer({ exercise, onDone }: { exercise: Exercise; onDone: () => void }) {
-  const phases = exercise.phases ?? [];
-  const cycles = exercise.cycles ?? 6;
-  const [scale] = useState(() => new Animated.Value(0));
-  const [step, setStep] = useState(0);
-  const phase = phases[step % phases.length];
-  const cycle = Math.floor(step / phases.length) + 1;
-  const done = useEffectEvent(onDone);
-
-  useEffect(() => {
-    if (!phase) return;
-    tap();
-    const anim = Animated.timing(scale, { toValue: phase.to, duration: phase.seconds * 1000, useNativeDriver: true });
-    anim.start();
-    const t = setTimeout(() => {
-      if (step + 1 >= phases.length * cycles) done();
-      else setStep(step + 1);
-    }, phase.seconds * 1000);
-    return () => {
-      anim.stop();
-      clearTimeout(t);
-    };
-  }, [step, phase, phases.length, cycles, scale]);
-
-  const size = scale.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] });
-  return (
-    <View style={{ alignItems: 'center', gap: space.lg }}>
-      <View style={styles.breathBox}>
-        <Animated.View style={[styles.breathOuter, { transform: [{ scale: size }] }]} />
-        <View style={styles.breathCenter}>
-          <Txt style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: colors.onDark, textAlign: 'center' }}>{phase?.label}</Txt>
-          <Txt variant="small" style={{ color: colors.onDarkMuted }}>{phase?.seconds} segundos</Txt>
-        </View>
-      </View>
-      <Txt variant="small" style={{ color: colors.onDarkMuted }}>Ciclo {cycle} de {cycles}</Txt>
     </View>
   );
 }
@@ -131,25 +92,30 @@ export function ExercisePlayer({ exercises, onDone }: { exercises: Exercise[]; o
     } else setIndex(index + 1);
   };
   if (!current) return null;
-  return (
-    <View style={styles.player}>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <Txt variant="eyebrow" style={{ color: colors.coral }}>
-          {exercises.length > 1 ? `Exercício ${index + 1} de ${exercises.length}` : 'Exercício guiado'} · {current.durationLabel}
-        </Txt>
-        <Pressable onPress={finish} hitSlop={10} accessibilityRole="button">
-          <Txt variant="small" style={{ color: colors.onDarkMuted }}>Pular</Txt>
-        </Pressable>
-      </Row>
-      <View style={{ gap: 4 }}>
-        <Txt variant="title" style={{ color: colors.onDark }}>{current.title}</Txt>
-        <Txt style={{ color: colors.onDarkMuted }}>{current.subtitle}</Txt>
+  const header = exercises.length > 1 ? (
+    <Row style={{ justifyContent: 'space-between' }}>
+      <Txt variant="eyebrow" style={{ color: colors.coralText }}>{index + 1} de {exercises.length}</Txt>
+      <Pressable onPress={finish} hitSlop={10} accessibilityRole="button"><Txt variant="small">Pular</Txt></Pressable>
+    </Row>
+  ) : null;
+  if (current.kind === 'breath') {
+    return (
+      <View style={{ gap: space.sm }}>
+        {header}
+        <BreathSession key={current.id} exercise={current} onDone={finish} />
       </View>
-      {current.kind === 'breath' ? (
-        <BreathPlayer key={current.id} exercise={current} onDone={finish} />
-      ) : (
+    );
+  }
+  return (
+    <View style={{ gap: space.sm }}>
+      {header}
+      <View style={styles.player}>
+        <View style={{ gap: 4 }}>
+          <Txt variant="title" style={{ color: colors.onDark }}>{current.title}</Txt>
+          <Txt style={{ color: colors.onDarkMuted }}>{current.subtitle}</Txt>
+        </View>
         <StepsPlayer key={current.id} exercise={current} onDone={finish} />
-      )}
+      </View>
     </View>
   );
 }
@@ -191,9 +157,6 @@ const styles = StyleSheet.create({
   emergency: { gap: space.md, backgroundColor: colors.coralSoft, borderRadius: radius.md, padding: space.lg },
   phone: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.petrol, borderRadius: radius.pill, paddingVertical: 10, paddingHorizontal: space.lg },
   player: { backgroundColor: colors.deep, borderRadius: radius.lg, padding: space.xl, gap: space.xl },
-  breathBox: { width: 240, height: 240, alignItems: 'center', justifyContent: 'center' },
-  breathOuter: { position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(69,194,164,0.22)', borderWidth: 2, borderColor: colors.mint },
-  breathCenter: { width: 150, alignItems: 'center', gap: 4 },
   dot: { width: 26, height: 5, borderRadius: 3 },
   after: { gap: space.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg },
   scale10: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

@@ -1,3 +1,4 @@
+import { authMessage } from '../domain/auth';
 import { dayKey } from '../domain/dates';
 import { PERSISTENT_METRICS } from '../domain/panels';
 import { requireSupabase } from '../lib/supabase';
@@ -98,6 +99,48 @@ export const supabaseApi: Api = {
   onAuthChange(listener) {
     const { data } = requireSupabase().auth.onAuthStateChange((_event, session) => listener(toSessionUser(session?.user)));
     return () => data.subscription.unsubscribe();
+  },
+
+  async signIn(email, password) {
+    const { error } = await requireSupabase().auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+    if (error) throw new Error(authMessage(error.message));
+  },
+
+  async signUp(name, email, password) {
+    const { data, error } = await requireSupabase().auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: { data: { full_name: name.trim() } },
+    });
+    if (error) throw new Error(authMessage(error.message));
+    // Com confirmação de e-mail ligada, o Supabase não diz se o e-mail já existe: devolve um usuário sem identidades.
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      throw new Error(authMessage('already registered'));
+    }
+    return { needsCode: !data.session };
+  },
+
+  async confirmSignUp(email, code) {
+    const { error } = await requireSupabase().auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'signup' });
+    if (error) throw new Error(authMessage(error.message));
+  },
+
+  async resendSignUpCode(email) {
+    const { error } = await requireSupabase().auth.resend({ type: 'signup', email: email.trim().toLowerCase() });
+    if (error) throw new Error(authMessage(error.message));
+  },
+
+  async requestPasswordReset(email) {
+    const { error } = await requireSupabase().auth.resetPasswordForEmail(email.trim().toLowerCase());
+    if (error) throw new Error(authMessage(error.message));
+  },
+
+  async resetPassword(email, code, newPassword) {
+    const sb = requireSupabase();
+    const { error } = await sb.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'recovery' });
+    if (error) throw new Error(authMessage(error.message));
+    const up = await sb.auth.updateUser({ password: newPassword });
+    if (up.error) throw new Error(authMessage(up.error.message));
   },
 
   async requestCode(email) {

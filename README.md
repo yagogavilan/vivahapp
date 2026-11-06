@@ -14,6 +14,15 @@ Este é o **MVP de 01/12/2026**:
 - **Check-in de humor e sono:** só com consentimento (dado de saúde, LGPD art. 11).
 - **Privacidade:** o aluno exporta os próprios dados e apaga a conta dentro do app, como as lojas exigem.
 
+### Experiência mais visual (versão 8)
+
+- **Login com e-mail e senha** e cadastro completo: nome, e-mail, senha com medidor de força, confirmação da senha, aceite da LGPD e confirmação do e-mail por código. "Esqueci a senha" troca a senha com um código, sem sair do app.
+- **Jornada sempre na ordem** (1 Respira, 2 Ritmo, 3 Move, 4 Nutre, 5 Prospera, 6 Eleva), na tela inicial e no resultado do teste, com a etiqueta **Recomendada** na trilha indicada. Todas abrem com um toque.
+- **Teste inicial** com perguntas curtas e respostas visuais (barras de intensidade e ícones).
+- **Hoje** com humor em um toque (carinhas), o dia em 5 ícones com o próximo passo em destaque e, na Respira, a **respiração guiada interativa**: círculo que enche e esvazia, contagem grande, sons para inspirar, segurar e soltar, som do mar opcional, vibração e escolha de 1, 2 ou 3 minutos. Os sons são gerados por `scripts/generate-sounds.py` (sem direitos de terceiros).
+- Novos exercícios: suspiro cíclico (Balban et al., Cell Reports Medicine, 2023) e coerência cardíaca (6 respirações por minuto).
+- Menos texto em todas as telas, números pequenos com botões de − e +.
+
 ### Loja e Socorro (versão 7)
 
 - **Menu Loja** (ícone de sacola), no lugar de Prêmios, com duas partes separadas:
@@ -131,7 +140,7 @@ npm install
 npm run web          # abre no navegador
 ```
 
-Sem `.env`, o app abre em **modo demonstração**: aceita qualquer e-mail, o código é `123456` e vem com uma aluna que já assina a Respira e tem o low ticket Calma em 5 Minutos. E-mail que começa com `admin` entra como administrador.
+Sem `.env`, o app abre em **modo demonstração**: entre com `ana@exemplo.com` (aluna que assina a Respira) ou `admin@vivah.com.br` (administrador), senha `vivah1234`, ou crie uma conta (o código de confirmação é `123456`).
 
 ### Testar no iPhone
 
@@ -158,10 +167,11 @@ O Expo Go da App Store só abre projetos até o SDK 54, e este app usa o SDK 58.
    npx supabase@latest db push                                   # cria tabelas, funções e regras de acesso
    psql "$(npx supabase@latest db url)" -f supabase/seed.sql     # ou cole o seed.sql no SQL Editor
    ```
-4. **Login por código:** em Authentication → Email Templates → *Magic Link*, troque o corpo por um texto com `{{ .Token }}`, por exemplo:
-   > Seu código de acesso à Vivah é **{{ .Token }}**. Ele vale por 1 hora.
-
-   Em Authentication → SMTP, configure um provedor de e-mail próprio (Resend, SES, SendGrid…). O SMTP padrão do Supabase tem limite baixo de envios.
+4. **Login com e-mail e senha:**
+   - Authentication → Providers → Email: deixe ativos *Enable Email provider* e *Confirm email*. Em Password, defina o mínimo de 8 caracteres (o app já exige letra e número).
+   - Authentication → Email Templates: o app confirma o cadastro e troca a senha com **código de 6 dígitos**, sem link. Em *Confirm signup* e em *Reset password*, troque o corpo por um texto com `{{ .Token }}`, por exemplo:
+     > Seu código da Vivah é **{{ .Token }}**. Ele vale por 1 hora.
+   - Authentication → SMTP: configure um provedor de e-mail próprio (Resend, SES, SendGrid…). O SMTP padrão do Supabase envia só 2 e-mails por hora.
 5. **Edge Functions:**
    ```bash
    npx supabase@latest secrets set HOTMART_HOTTOK=hottok-copiado-da-hotmart

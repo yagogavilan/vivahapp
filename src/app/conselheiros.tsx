@@ -34,8 +34,7 @@ export default function Conselheiros() {
         <Txt variant="eyebrow">Conselheiros Vivah</Txt>
         <Txt variant="hero">Converse com quem já passou por isso</Txt>
         <Txt>
-          Conselheiros são alunos que chegaram ao nível {levelInfo(COUNSELOR_LEVEL).name} nesta trilha ajudando outras pessoas e fizeram a
-          Formação de Conselheiro. Eles compartilham experiência: não fazem terapia nem diagnóstico.
+          Alunos nível {levelInfo(COUNSELOR_LEVEL).name} que já passaram pelo mesmo. Trocam experiência, não fazem terapia.
         </Txt>
       </View>
 

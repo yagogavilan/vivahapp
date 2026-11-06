@@ -25,7 +25,10 @@ export function StoreProducts({ trackId }: { trackId: string }) {
   }
   return (
     <View style={{ gap: space.md }}>
-      <Txt variant="small">Produtos físicos da Vivah, entregues no seu endereço. O pagamento é feito na página da loja, com o seu e-mail já preenchido. Para trocar pontos por prêmios, use “Resgatar pontos”.</Txt>
+      <Row gap={space.lg} style={{ flexWrap: 'wrap' }}>
+        <Row gap={6}><Icon name="truck" size={14} color={colors.textSubtle} /><Txt variant="small">Entrega em casa</Txt></Row>
+        <Row gap={6}><Icon name="shield" size={14} color={colors.textSubtle} /><Txt variant="small">Pagamento seguro</Txt></Row>
+      </Row>
       <View style={styles.grid}>
         {items.map((i) => (
           <View key={i.id} style={styles.card}>

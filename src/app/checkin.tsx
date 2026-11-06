@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { AfterCheck, EmergencyCard, ExercisePlayer } from '@/components/care';
+import { MOODS } from '@/components/mood';
 import { FeelingChip } from '@/components/feeling';
 import { TrackContextBar } from '@/components/space';
 import { Button, Card, Icon, type IconName, Loading, ProgressBar, Row, Screen, Txt } from '@/components/ui';
@@ -39,7 +40,7 @@ const LEVEL_STYLE: Record<CheckinReading['level'], { bg: string; fg: string; sub
  * alertas e, se o estado estiver crítico, um exercício guiado começa sozinho.
  */
 export default function CheckinScreen() {
-  const params = useLocalSearchParams<{ track?: string }>();
+  const params = useLocalSearchParams<{ track?: string; mood?: string }>();
   const trackId = params.track ?? AQUECIMENTO;
   const { profile } = useSession();
   const library = useLibrary();
@@ -56,7 +57,8 @@ export default function CheckinScreen() {
     const { after: _after, ...rest } = checkin.today.answers;
     return <Summary key={JSON.stringify(rest)} trackId={trackId} saved={checkin.today} yesterday={yesterday} onRedo={() => setRedo(true)} />;
   }
-  return <Questions trackId={trackId} title={space_?.title ?? 'Vivah'} onSaved={() => setRedo(false)} />;
+  const mood = Number(params.mood);
+  return <Questions trackId={trackId} title={space_?.title ?? 'Vivah'} initialMood={mood >= 1 && mood <= 5 ? mood : undefined} onSaved={() => setRedo(false)} />;
 }
 
 function Consent() {
@@ -67,8 +69,7 @@ function Consent() {
         <Txt variant="eyebrow">Check-in diário</Txt>
         <Txt variant="hero">Antes de começar</Txt>
         <Txt>
-          No check-in você conta como está: humor, sono, ansiedade e o que sente. São dados de saúde, e a lei (LGPD, art. 11) pede a sua
-          autorização para guardar. Só você vê as suas respostas. Você pode apagar tudo quando quiser em Perfil › Privacidade.
+          Humor e sono são dados de saúde (LGPD). Só você vê, e dá para apagar quando quiser.
         </Txt>
       </View>
       <Button
@@ -82,10 +83,11 @@ function Consent() {
   );
 }
 
-function Questions({ trackId, title, onSaved }: { trackId: string; title: string; onSaved: () => void }) {
+function Questions({ trackId, title, initialMood, onSaved }: { trackId: string; title: string; initialMood?: number; onSaved: () => void }) {
   const questions = questionsFor(trackId);
-  const [answers, setAnswers] = useState<Answers>({});
-  const [i, setI] = useState(0);
+  // O humor pode vir do toque na carinha, no Hoje: começa já na segunda pergunta.
+  const [answers, setAnswers] = useState<Answers>(initialMood ? { mood: initialMood } : {});
+  const [i, setI] = useState(initialMood && questions[0]?.id === 'mood' ? 1 : 0);
   const save = useSaveCheckin();
   const [error, setError] = useState<string | null>(null);
   const q = questions[i];
@@ -228,7 +230,9 @@ function QuestionInput({ q, answers, onAnswer }: { q: CheckinQuestion; answers: 
           <Pressable key={label} onPress={() => onAnswer(v)} accessibilityRole="button" accessibilityState={{ selected: value === v }}
             style={[styles.option, value === v && styles.optionOn]}>
             {q.type === 'scale5' ? (
-              <View style={[styles.dot, { backgroundColor: ['#E57B5F', '#F0A35E', '#E9CF7A', '#9BD5B9', '#45C2A4'][k] }]} />
+              <View style={[styles.face, { backgroundColor: MOODS[k].color }]}>
+                <Icon name={MOODS[k].icon} size={18} color={colors.deep} />
+              </View>
             ) : null}
             <Txt variant="bodyStrong" style={{ color: value === v ? colors.onDark : colors.text }}>{label}</Txt>
           </Pressable>
@@ -340,6 +344,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  face: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   feeling: { paddingVertical: 14, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 2 },
   num: { width: 52, height: 52, borderRadius: 26, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },

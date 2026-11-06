@@ -20,7 +20,7 @@ export default function Diagnostico() {
         <LifeTestResult
           result={result}
           tracks={library.data?.tracks ?? []}
-          startLabel="Ir para a trilha"
+          startLabel="Ir para"
           onStart={(id) => router.replace({ pathname: '/t/[track]', params: { track: id } })}
         />
       ) : (

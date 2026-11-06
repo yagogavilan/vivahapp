@@ -55,7 +55,7 @@ export default function Conquistas() {
         </Row>
         <WeekStrip streak={streak} />
         <Txt variant="small">
-          Qualquer atividade conta para a sequência: ouvir o Escudo, uma aula, um check-in, um bloco de foco ou uma live.
+          Qualquer atividade conta: Escudo, aula, check-in, foco ou live.
           Você tem 1 dia de folga por semana sem perder a sequência.
         </Txt>
       </Card>

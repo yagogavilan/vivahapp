@@ -198,6 +198,21 @@ function seedHistory() {
   }
 }
 
+/** Contas da demonstração (só nesta sessão). Duas já prontas para testar. */
+const demoAccounts = new Map<string, { name: string; password: string; confirmed: boolean }>([
+  ['ana@exemplo.com', { name: 'Ana Souza', password: 'vivah1234', confirmed: true }],
+  ['admin@vivah.com.br', { name: 'Equipe Vivah', password: 'vivah1234', confirmed: true }],
+]);
+const resetCodes = new Set<string>();
+
+function startDemoSession(email: string, name: string | null) {
+  const fresh = initialState();
+  state = { ...fresh, user: { id: 'demo-user', email } };
+  seedHistory();
+  state.profile = { id: 'demo-user', role: email.startsWith('admin') ? 'admin' : 'aluno', email, fullName: name, goal: null, healthConsentAt: null, onboardedAt: null, preferences: { showStreak: true, liveReminders: true, dailyReminder: null } };
+  emit();
+}
+
 export const demoApi: Api = {
   mode: 'demo',
 
@@ -208,6 +223,45 @@ export const demoApi: Api = {
     listeners.add(listener);
     return () => listeners.delete(listener);
   },
+  async signIn(email, password) {
+    await wait(400);
+    const e = email.trim().toLowerCase();
+    const acc = demoAccounts.get(e);
+    if (!acc || acc.password !== password) throw new Error('E-mail ou senha incorretos.');
+    if (!acc.confirmed) throw new Error('Confirme o seu e-mail com o código que enviamos.');
+    startDemoSession(e, acc.name);
+  },
+  async signUp(name, email, password) {
+    await wait(400);
+    const e = email.trim().toLowerCase();
+    if (demoAccounts.get(e)?.confirmed) throw new Error('Este e-mail já tem conta. Entre ou use "Esqueci a senha".');
+    demoAccounts.set(e, { name: name.trim(), password, confirmed: false });
+    return { needsCode: true };
+  },
+  async confirmSignUp(email, code) {
+    await wait(400);
+    const e = email.trim().toLowerCase();
+    const acc = demoAccounts.get(e);
+    if (!acc) throw new Error('Crie a conta primeiro.');
+    if (code.trim() !== DEMO_CODE) throw new Error(`Código inválido. Na demonstração, o código é ${DEMO_CODE}.`);
+    acc.confirmed = true;
+    startDemoSession(e, acc.name);
+  },
+  async resendSignUpCode() {
+    await wait(300);
+  },
+  async requestPasswordReset(email) {
+    await wait(400);
+    resetCodes.add(email.trim().toLowerCase());
+  },
+  async resetPassword(email, code, newPassword) {
+    await wait(400);
+    const e = email.trim().toLowerCase();
+    if (code.trim() !== DEMO_CODE) throw new Error(`Código inválido. Na demonstração, o código é ${DEMO_CODE}.`);
+    const acc = demoAccounts.get(e) ?? { name: '', password: '', confirmed: true };
+    demoAccounts.set(e, { ...acc, password: newPassword, confirmed: true });
+    startDemoSession(e, acc.name || null);
+  },
   async requestCode(email) {
     await wait(400);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) throw new Error('Confira o e-mail.');
@@ -215,11 +269,7 @@ export const demoApi: Api = {
   async verifyCode(email, code) {
     await wait(400);
     if (code.trim() !== DEMO_CODE) throw new Error(`No modo demonstração, o código é ${DEMO_CODE}.`);
-    const fresh = initialState();
-    state = { ...fresh, user: { id: 'demo-user', email: email.trim().toLowerCase() } };
-    seedHistory();
-    state.profile = { id: 'demo-user', role: state.user!.email.startsWith('admin') ? 'admin' : 'aluno', email: state.user!.email, fullName: null, goal: null, healthConsentAt: null, onboardedAt: null, preferences: { showStreak: true, liveReminders: true, dailyReminder: null } };
-    emit();
+    startDemoSession(email.trim().toLowerCase(), null);
   },
   async signOut() {
     state.user = null;

@@ -69,7 +69,7 @@ export default function Comunidade() {
         <View style={{ gap: 4 }}>
           <Txt variant="eyebrow">Comunidade {sp.title}</Txt>
           <Txt variant="hero">Uma comunidade só de quem assina a trilha</Txt>
-          <Txt>Aqui as pessoas pedem apoio, contam conquistas, trocam dicas e ganham pontos de bondade. Enquanto isso, a comunidade da Área de Aquecimento é aberta para todos.</Txt>
+          <Txt>Apoio, conquistas e dicas de quem vive o mesmo que você.</Txt>
         </View>
         <TrackSubscribePanel track={sp.track} reason="A assinatura anual libera a comunidade, os cursos em sequência e o espaço de conselheiros da trilha." />
         <Pressable onPress={() => router.push({ pathname: '/t/[track]/comunidade', params: { track: AQUECIMENTO } })} accessibilityRole="button">
@@ -142,7 +142,7 @@ export default function Comunidade() {
         </ScrollView>
         {!feelingToday ? (
           <Pressable onPress={() => router.push({ pathname: '/checkin', params: { track: sp.id } })}>
-            <Txt variant="small" style={{ textDecorationLine: 'underline' }}>Faça o check-in para encontrar quem sente o mesmo que você hoje.</Txt>
+            <Txt variant="small" style={{ textDecorationLine: 'underline' }}>Faça o check-in e veja quem sente o mesmo</Txt>
           </Pressable>
         ) : null}
       </View>

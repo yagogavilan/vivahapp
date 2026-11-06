@@ -42,7 +42,7 @@ function Control({ field, value, onChange, planValues }: Parameters<typeof Field
         />
       );
     case 'number':
-      return <NumberInput field={field} value={value} onChange={onChange} />;
+      return isStepper(field) ? <Stepper field={field} value={value} onChange={onChange} /> : <NumberInput field={field} value={value} onChange={onChange} />;
     case 'yesno':
       return (
         <Row gap={space.sm}>
@@ -124,6 +124,32 @@ function Control({ field, value, onChange, planValues }: Parameters<typeof Field
   }
 }
 
+/** Números pequenos e inteiros (copos, blocos, pausas) viram botões de − e +, sem teclado. */
+function isStepper(field: Field): boolean {
+  return (field.max ?? 999) <= 50 && !['R$', 'kg', 'cm', '%'].includes(field.unit ?? '');
+}
+
+function Stepper({ field, value, onChange }: { field: Field; value: LogValues[string]; onChange: (v: LogValues[string]) => void }) {
+  const n = typeof value === 'number' ? value : 0;
+  const min = field.min ?? 0;
+  const max = field.max ?? 50;
+  const set = (v: number) => { tap(); onChange(Math.max(min, Math.min(max, v))); };
+  return (
+    <Row gap={space.md}>
+      <Pressable onPress={() => set(n - 1)} disabled={n <= min} accessibilityRole="button" accessibilityLabel={`Menos ${field.label}`}
+        style={[styles.step, n <= min && { opacity: 0.35 }]}>
+        <Icon name="minus" size={20} color={colors.petrol} />
+      </Pressable>
+      <Txt variant="title" style={{ minWidth: 44, textAlign: 'center' }}>{value === undefined ? '–' : n}</Txt>
+      <Pressable onPress={() => set(value === undefined ? Math.max(min, 1) : n + 1)} disabled={n >= max} accessibilityRole="button" accessibilityLabel={`Mais ${field.label}`}
+        style={[styles.step, styles.stepPlus, n >= max && { opacity: 0.35 }]}>
+        <Icon name="plus" size={20} color={colors.onDark} />
+      </Pressable>
+      {field.unit ? <Txt variant="small">{field.unit}</Txt> : null}
+    </Row>
+  );
+}
+
 /**
  * Número com vírgula: o texto fica guardado enquanto a pessoa digita ("82," vira 82,4
  * no próximo toque) e o valor numérico vai para o formulário.
@@ -189,6 +215,8 @@ export function ValidationList({ checks }: { checks: Check[] }) {
 }
 
 const styles = StyleSheet.create({
+  step: { width: 46, height: 46, borderRadius: 23, borderWidth: 1.5, borderColor: colors.petrol, alignItems: 'center', justifyContent: 'center' },
+  stepPlus: { backgroundColor: colors.petrol },
   input: {
     minHeight: 48,
     borderWidth: 1.5,

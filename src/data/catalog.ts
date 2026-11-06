@@ -34,6 +34,7 @@ export const AREA_LABEL: Record<LifeArea, string> = {
 /** Preço de exemplo da assinatura anual de cada trilha: ajuste na página de admin. */
 const TRACK_PRICE = 'R$ 397 por ano';
 
+/** Na ordem da jornada Vivah: Respira → Ritmo → Move → Nutre → Prospera → Eleva. */
 export const tracks: Track[] = [
   {
     id: 'respira',
@@ -77,7 +78,7 @@ export const tracks: Track[] = [
     teacher: 'Especialistas convidados',
     status: 'live',
     launchLabel: 'Disponível',
-    sort: 3,
+    sort: 6,
     priceLabel: TRACK_PRICE,
   },
   {
@@ -92,7 +93,7 @@ export const tracks: Track[] = [
     teacher: 'Especialista em finanças',
     status: 'live',
     launchLabel: 'Disponível',
-    sort: 4,
+    sort: 5,
     priceLabel: TRACK_PRICE,
   },
   {
@@ -107,7 +108,7 @@ export const tracks: Track[] = [
     teacher: 'Educador físico (CREF)',
     status: 'live',
     launchLabel: 'Disponível',
-    sort: 5,
+    sort: 3,
     priceLabel: TRACK_PRICE,
   },
   {
@@ -122,10 +123,12 @@ export const tracks: Track[] = [
     teacher: 'Nutricionista (CRN)',
     status: 'live',
     launchLabel: 'Disponível',
-    sort: 6,
+    sort: 4,
     priceLabel: TRACK_PRICE,
   },
 ];
+
+tracks.sort((a, b) => a.sort - b.sort);
 
 export const trackByArea: Record<LifeArea, string> = {
   mente: 'respira',

@@ -11,8 +11,7 @@ interface SessionValue {
   user: SessionUser | null;
   profile: Profile | undefined;
   onboarded: boolean;
-  requestCode: (email: string) => Promise<void>;
-  verifyCode: (email: string, code: string) => Promise<void>;
+  auth: Pick<typeof api, 'signIn' | 'signUp' | 'confirmSignUp' | 'resendSignUpCode' | 'requestPasswordReset' | 'resetPassword' | 'requestCode' | 'verifyCode'>;
   signOut: () => Promise<void>;
 }
 
@@ -52,8 +51,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       user: user ?? null,
       profile: profile.data,
       onboarded: Boolean(profile.data?.onboardedAt),
-      requestCode: (email) => api.requestCode(email),
-      verifyCode: (email, code) => api.verifyCode(email, code),
+      auth: api,
       signOut: () => api.signOut(),
     };
   }, [user, profile.data, profile.isPending, profile.isError]);

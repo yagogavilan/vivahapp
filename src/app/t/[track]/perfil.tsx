@@ -61,8 +61,7 @@ export default function Perfil() {
           <View style={{ gap: 2 }}>
             <Txt variant="heading">Coleção de selos</Txt>
             <Txt variant="small">
-              Cada trilha tem dois selos: o de aulas, que se completa pedaço por pedaço a cada curso concluído, e o de bondade, que sobe
-              conforme você ajuda as pessoas daquela comunidade.
+              Aulas concluídas e ajuda na comunidade.
             </Txt>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.md }}>
@@ -128,8 +127,7 @@ export default function Perfil() {
           ))
         ) : (
           <Txt variant="small">
-            Você está na Área de Aquecimento, com as lives e o Escudo Anticrise liberados. Os cursos aparecem aqui quando o
-            acesso é liberado para o seu e-mail.
+            Lives e Escudo liberados. Seus cursos aparecem aqui quando você assinar uma trilha.
           </Txt>
         )}
       </Card>

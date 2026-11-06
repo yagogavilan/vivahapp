@@ -57,7 +57,7 @@ export default function PainelDaTrilha() {
         ))}
       </View>
       <Txt variant="small" style={{ color: colors.textSubtle }}>
-        Os itens com cadeado são dados de saúde: só ficam guardados com o seu consentimento e somem se você o retirar em Privacidade. O painel orienta hábitos e não substitui médico, nutricionista, educador físico, psicólogo ou planejador financeiro.
+        Cadeado = dado de saúde, guardado só com a sua autorização. O painel orienta hábitos e não substitui profissionais.
       </Txt>
     </Screen>
   );

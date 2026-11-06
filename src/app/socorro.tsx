@@ -31,7 +31,7 @@ export default function Socorro() {
       <View style={{ gap: space.xs }}>
         <Txt variant="eyebrow">Socorro</Txt>
         <Txt variant="hero">Respire. Você está seguro aqui.</Txt>
-        <Txt>Escolha um exercício. Leva só alguns minutos e ajuda o corpo a sair do modo alerta.</Txt>
+        <Txt>Escolha um. Leva poucos minutos.</Txt>
       </View>
 
       {current && !finished ? (

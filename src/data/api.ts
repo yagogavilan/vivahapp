@@ -110,6 +110,16 @@ export interface Api {
 
   getSessionUser(): Promise<SessionUser | null>;
   onAuthChange(listener: (user: SessionUser | null) => void): () => void;
+  /** Entrar com e-mail e senha. */
+  signIn(email: string, password: string): Promise<void>;
+  /** Criar conta. needsCode = a conta só abre depois do código enviado por e-mail. */
+  signUp(name: string, email: string, password: string): Promise<{ needsCode: boolean }>;
+  confirmSignUp(email: string, code: string): Promise<void>;
+  resendSignUpCode(email: string): Promise<void>;
+  /** Esqueci a senha: envia um código e depois troca a senha com ele. */
+  requestPasswordReset(email: string): Promise<void>;
+  resetPassword(email: string, code: string, newPassword: string): Promise<void>;
+  /** Entrar só com código por e-mail (usado como alternativa). */
   requestCode(email: string): Promise<void>;
   verifyCode(email: string, code: string): Promise<void>;
   signOut(): Promise<void>;

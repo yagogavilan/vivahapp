@@ -28,26 +28,26 @@ export interface TestQuestion {
 }
 
 const freq = (labels: [string, string, string, string]): TestOption[] => labels.map((label, score) => ({ label, score }));
-const FREQ = freq(['Nunca', 'Alguns dias', 'Mais da metade dos dias', 'Quase todos os dias']);
+const FREQ = freq(['Nunca', 'Alguns dias', 'Mais da metade dos dias', 'Quase todo dia']);
 
 export const LIFE_TEST: TestQuestion[] = [
-  { id: 'ansiedade', area: 'mente', prompt: 'Nas últimas duas semanas, quantas vezes você se sentiu nervoso, ansioso ou no limite?', options: FREQ },
-  { id: 'preocupacao', area: 'mente', prompt: 'E quantas vezes não conseguiu parar ou controlar as preocupações?', options: FREQ },
-  { id: 'sono', area: 'mente', prompt: 'Com que frequência você dorme mal ou acorda cansado?', options: FREQ },
-  { id: 'prioridades', area: 'tempo', prompt: 'Com que frequência você termina o dia sem ter feito o que era mais importante?', options: FREQ },
+  { id: 'ansiedade', area: 'mente', prompt: 'Nas últimas 2 semanas, você se sentiu nervoso ou ansioso?', options: FREQ },
+  { id: 'preocupacao', area: 'mente', prompt: 'E as preocupações, saíram do seu controle?', options: FREQ },
+  { id: 'sono', area: 'mente', prompt: 'Você dorme mal ou acorda cansado?', options: FREQ },
+  { id: 'prioridades', area: 'tempo', prompt: 'O dia acaba sem você fazer o mais importante?', options: FREQ },
   { id: 'rotina', area: 'tempo', prompt: 'Como está a sua rotina?', options: freq(['Tenho horários e cumpro', 'Tenho, mas falho às vezes', 'Muda todo dia', 'Não tenho rotina nenhuma']) },
-  { id: 'movimento', area: 'corpo', prompt: 'Em quantos dias da semana você se movimenta por pelo menos 30 minutos?', options: freq(['5 ou mais', '3 ou 4', '1 ou 2', 'Nenhum']) },
-  { id: 'disposicao', area: 'corpo', prompt: 'Como está a sua disposição física no dia a dia?', options: freq(['Ótima', 'Boa', 'Baixa', 'Vivo cansado']) },
-  { id: 'ultraprocessados', area: 'alimentacao', prompt: 'Com que frequência você come fast food, salgadinhos ou outros ultraprocessados?', options: freq(['Quase nunca', '1 ou 2 vezes por semana', 'Quase todo dia', 'Várias vezes por dia']) },
-  { id: 'emocao', area: 'alimentacao', prompt: 'Você come por ansiedade, tédio ou emoção?', options: FREQ },
-  { id: 'mes', area: 'financas', prompt: 'Como você costuma terminar o mês?', options: freq(['Sobra e eu guardo', 'Empata', 'Às vezes falta', 'No vermelho, com dívidas']) },
-  { id: 'dinheiro', area: 'financas', prompt: 'Quanto o dinheiro tira o seu sono?', options: freq(['Nada', 'Um pouco', 'Bastante', 'Muito']) },
-  { id: 'carreira', area: 'carreira', prompt: 'Como você se sente em relação ao seu trabalho ou carreira?', options: freq(['Crescendo', 'Estável', 'Estagnado', 'Perdido']) },
-  { id: 'plano', area: 'carreira', prompt: 'Você tem um plano claro para a sua vida profissional nos próximos 12 meses?', options: freq(['Sim, e estou executando', 'Tenho uma ideia', 'Não muito', 'Nenhum']) },
+  { id: 'movimento', area: 'corpo', prompt: 'Quantos dias por semana você se exercita por 30 minutos ou mais?', options: freq(['5 ou mais', '3 ou 4', '1 ou 2', 'Nenhum']) },
+  { id: 'disposicao', area: 'corpo', prompt: 'Como está a sua disposição?', options: freq(['Ótima', 'Boa', 'Baixa', 'Vivo cansado']) },
+  { id: 'ultraprocessados', area: 'alimentacao', prompt: 'Quantas vezes você come fast food, salgadinho ou doce de pacote?', options: freq(['Quase nunca', '1 ou 2 vezes por semana', 'Quase todo dia', 'Várias vezes por dia']) },
+  { id: 'emocao', area: 'alimentacao', prompt: 'Você come por ansiedade ou tédio?', options: FREQ },
+  { id: 'mes', area: 'financas', prompt: 'Como o seu mês costuma terminar?', options: freq(['Sobra e eu guardo', 'Empata', 'Às vezes falta', 'No vermelho, com dívidas']) },
+  { id: 'dinheiro', area: 'financas', prompt: 'O dinheiro tira o seu sono?', options: freq(['Nada', 'Um pouco', 'Bastante', 'Muito']) },
+  { id: 'carreira', area: 'carreira', prompt: 'Como você se sente no trabalho?', options: freq(['Crescendo', 'Estável', 'Estagnado', 'Perdido']) },
+  { id: 'plano', area: 'carreira', prompt: 'Você tem um plano para a carreira nos próximos 12 meses?', options: freq(['Sim, e estou executando', 'Tenho uma ideia', 'Não muito', 'Nenhum']) },
   {
     id: 'objetivo',
     area: 'objetivo',
-    prompt: 'O que você mais quer mudar nos próximos 3 meses?',
+    prompt: 'O que você mais quer mudar agora?',
     options: [
       { label: 'Ter paz na cabeça e dormir melhor', score: 0 },
       { label: 'Organizar a minha rotina e o meu tempo', score: 1 },
@@ -77,25 +77,25 @@ export const MOMENTS: Record<MomentId, Moment> = {
     id: 'reequilibrio',
     step: 1,
     title: 'Momento de reequilíbrio',
-    text: 'A sua mente está pedindo atenção. Antes de acelerar qualquer outra área, o primeiro passo é baixar o volume da ansiedade e voltar a dormir bem.',
+    text: 'Sua mente pede atenção. Primeiro passo: acalmar a ansiedade e voltar a dormir bem.',
   },
   organizacao: {
     id: 'organizacao',
     step: 2,
     title: 'Momento de organização',
-    text: 'A cabeça está mais tranquila, mas a base do dia a dia precisa de ordem: tempo, corpo e alimentação. É isso que dá energia para o resto.',
+    text: 'A cabeça está mais tranquila. Agora é organizar a base: tempo, corpo e alimentação.',
   },
   estabilidade: {
     id: 'estabilidade',
     step: 3,
     title: 'Momento de estabilidade',
-    text: 'A rotina está de pé. Agora o dinheiro é o que mais pesa: organizar o orçamento e sair do aperto traz segurança para crescer.',
+    text: 'A rotina está de pé. O que mais pesa agora é o dinheiro.',
   },
   crescimento: {
     id: 'crescimento',
     step: 4,
     title: 'Momento de crescimento',
-    text: 'A sua base está firme. É hora de investir na carreira: método, comunicação e liderança para dar o próximo passo.',
+    text: 'Sua base está firme. Hora de investir na carreira.',
   },
 };
 
