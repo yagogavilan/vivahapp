@@ -29,8 +29,8 @@ export function SpaceCover({ space, children, style, muted }: { space: Pick<Spac
 }
 
 /**
- * Topo das telas da trilha: em qual trilha o aluno está (toque para trocar)
- * e o botão de socorro, sempre à mão.
+ * Topo das telas da trilha: em qual trilha o aluno está (toque para trocar).
+ * Na Respira, também o botão de Socorro, sempre à mão.
  */
 export function SpaceHeader({ space, right }: { space: Space; right?: ReactNode }) {
   return (
@@ -61,7 +61,7 @@ export function SpaceHeader({ space, right }: { space: Space; right?: ReactNode 
         </SpaceCover>
       </Pressable>
       {right}
-      <Pressable
+      {space.id === 'respira' ? <Pressable
         onPress={() => {
           tap();
           router.push({ pathname: '/socorro', params: { track: space.id } });
@@ -71,7 +71,7 @@ export function SpaceHeader({ space, right }: { space: Space; right?: ReactNode 
         style={({ pressed }) => [styles.sos, { opacity: pressed ? 0.85 : 1 }]}>
         <Icon name="life-buoy" size={20} color={colors.coralText} />
         <Txt variant="bodyStrong" style={{ color: colors.coralText, fontSize: 11, lineHeight: 14 }}>Socorro</Txt>
-      </Pressable>
+      </Pressable> : null}
     </Row>
   );
 }

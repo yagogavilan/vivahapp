@@ -150,13 +150,14 @@ export const supabaseApi: Api = {
 
   async getCatalog(): Promise<Catalog> {
     const sb = requireSupabase();
-    const [tracks, courses, modules, lessons, products, links] = await Promise.all([
+    const [tracks, courses, modules, lessons, products, links, store] = await Promise.all([
       sb.from('tracks').select('*').order('sort'),
       sb.from('courses').select('*').order('sort'),
       sb.from('modules').select('*').order('sort'),
       sb.from('lessons').select('*').order('sort'),
       sb.from('products').select('*').eq('active', true),
       sb.from('product_courses').select('*'),
+      sb.from('store_items').select('*').order('sort'),
     ]);
     const linkRows = check(links) as Row[];
     return {
@@ -207,6 +208,10 @@ export const supabaseApi: Api = {
         hotmartProductId: r.hotmart_product_id,
         checkoutUrl: r.checkout_url,
         courseIds: linkRows.filter((l) => l.product_id === r.id).map((l) => l.course_id),
+      })),
+      storeItems: (check(store) as Row[]).map((r) => ({
+        id: r.id, trackId: r.track_id ?? null, title: r.title, description: r.description ?? '', priceLabel: r.price_label ?? null,
+        imageUrl: r.image_url ?? null, checkoutUrl: r.checkout_url ?? null, active: Boolean(r.active), sort: r.sort ?? 0,
       })),
     };
   },
@@ -683,6 +688,17 @@ export const supabaseApi: Api = {
     const sb = requireSupabase();
     const results = await Promise.all(orderedIds.map((id, i) => sb.from(kind).update({ sort: i + 1 }).eq('id', id)));
     results.forEach(check);
+  },
+
+  async adminSaveStoreItem(i) {
+    check(await requireSupabase().from('store_items').upsert({
+      id: i.id, track_id: i.trackId, title: i.title, description: i.description, price_label: i.priceLabel,
+      image_url: i.imageUrl, checkout_url: i.checkoutUrl, active: i.active, sort: i.sort,
+    }));
+  },
+
+  async adminDeleteStoreItem(id) {
+    check(await requireSupabase().from('store_items').delete().eq('id', id));
   },
 
   async adminSetCheckout(productId, checkoutUrl) {

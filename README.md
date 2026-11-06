@@ -14,6 +14,15 @@ Este é o **MVP de 01/12/2026**:
 - **Check-in de humor e sono:** só com consentimento (dado de saúde, LGPD art. 11).
 - **Privacidade:** o aluno exporta os próprios dados e apaga a conta dentro do app, como as lojas exigem.
 
+### Loja e Socorro (versão 7)
+
+- **Menu Loja** (ícone de sacola), no lugar de Prêmios, com duas partes separadas:
+  - **Produtos:** produtos físicos que a Vivah vende (camiseta, garrafa, planner, kits…), por trilha ou em todas. Preço, foto, link de pagamento e se está à venda ou oculto, tudo na página de admin (Administração → Loja). Produto físico pode ser vendido também nos apps do iPhone e do Android, porque o pagamento é fora do app (regra 3.1.5 da Apple e política de pagamentos do Google Play). Os itens que vêm no app são exemplos para trocar.
+  - **Resgatar pontos:** as recompensas da bondade (saldo, selos, catálogo e extrato), como antes.
+- **Socorro só na Respira:** o botão no topo e o atalho aparecem só nessa trilha. Os exercícios das outras trilhas (descarrego mental, relaxar o corpo…) abrem numa tela de exercício própria. O cuidado do check-in continua em todas as trilhas: se o check-in indicar crise, o app faz um exercício na hora e mostra o CVV 188.
+
+Migração `20261111000000_loja.sql` (tabela `store_items`).
+
 ### Painel de cada trilha e conteúdo completo (versão 6)
 
 - **Todas as seis trilhas no ar**, cada uma com 4 cursos em sequência (Respira 59 aulas, Ritmo 43, Eleva 36, Prospera 32, Move 55, Nutre 40) e de 2 a 3 low tickets. Os títulos e resumos das aulas são roteiro para os professores gravarem; troque o que quiser na página de admin.
@@ -41,7 +50,7 @@ Migração `20261108000000_trilha_anual_admin.sql`. Na demonstração, entre com
 
 ### Pontos, recompensas e o propósito de cada trilha (versão 4)
 
-- **Menus da trilha:** Hoje, Cursos, Comunidade, **Prêmios** e Perfil. A agenda saiu do menu: os compromissos do dia aparecem no Hoje (com "Ver agenda").
+- **Menus da trilha:** Hoje, Cursos, Comunidade, **Prêmios** (hoje, Loja) e Perfil. A agenda saiu do menu: os compromissos do dia aparecem no Hoje (com "Ver agenda").
 - **Hoje com o propósito da trilha:** check-in, **plano do dia validado na hora** (ex.: Ritmo recusa mais de 3 prioridades e agenda que não cabe no dia; Prospera confere se os gastos previstos passam do limite; Move respeita a dor do check-in), prática, **fechamento do dia com nota de 0 a 100** (Ritmo: teste de produtividade; Respira: diário da noite; Prospera: fechamento financeiro; Move: corpo ativo e minutos da semana contra os 150 da OMS; Nutre: comida de verdade; Eleva: dia profissional; Aquecimento: três coisas boas) e gráfico de evolução de 14 dias. Regras em `src/domain/programs.ts`.
 - **Pontos de 1 a 5, por trilha e validados no servidor:** curtida 1, agradecimento 2, mensagem de ajuda 3, conselho/dica 4 e apoio a outra pessoa 5. Cada atividade conta poucas vezes por dia (10, 5, 3, 1 e 1): no máximo **38 pontos por dia** em cada trilha. Curtidas da mesma pessoa contam até 10 por mês, agradecimentos até 3, apoio à mesma pessoa uma vez por semana. Cada ponto vira uma linha no extrato, com o motivo quando não pontua.
 - **Validação das mensagens:** ajuda (mín. 40 caracteres) e conselho (mín. 80) passam por regras de esforço, repetição, ofensa, contato fora do app e sinal de risco (`supabase/functions/_shared/contribution.ts`). Com `ANTHROPIC_API_KEY` configurada, a função `validate-contributions` também pede a avaliação do Claude. Sinal de risco vira denúncia para a equipe.

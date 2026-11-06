@@ -23,6 +23,7 @@ import type {
   PostKind,
   ReactionKind,
   SupportStatus,
+  StoreItem,
   ThankTarget,
   Track,
 } from './types';
@@ -422,6 +423,8 @@ export function useAdmin() {
     deleteLesson: useMutation(m((id: string) => api.adminDeleteLesson(id))),
     reorder: useMutation(m((v: { kind: 'courses' | 'modules' | 'lessons'; ids: string[] }) => api.adminReorder(v.kind, v.ids))),
     setCheckout: useMutation(m((v: { productId: string; url: string | null }) => api.adminSetCheckout(v.productId, v.url))),
+    saveStoreItem: useMutation(m((v: StoreItem) => api.adminSaveStoreItem(v))),
+    deleteStoreItem: useMutation(m((id: string) => api.adminDeleteStoreItem(id))),
   };
 }
 

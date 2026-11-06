@@ -109,6 +109,15 @@ describe('demonstração: admin cadastra e aluno segue a ordem', () => {
     await demoApi.signOut();
   });
 
+  it('loja: produtos físicos da trilha primeiro, depois os gerais; recompensas de pontos ficam fora', async () => {
+    const { storeItemsFor } = await import('../src/domain/store');
+    const { storeItems } = await import('../src/data/catalog');
+    const move = storeItemsFor('move', storeItems).map((i) => i.id);
+    expect(move.slice(0, 2)).toEqual(['garrafa-move', 'kit-elasticos']);
+    expect(move).toContain('camiseta-vivah');
+    expect(move).not.toContain('kit-marmitas');
+  });
+
   it('aluno não edita o catálogo', async () => {
     await demoApi.requestCode('ana@exemplo.com');
     await demoApi.verifyCode('ana@exemplo.com', '123456');
@@ -143,6 +152,9 @@ describe('demonstração: admin cadastra e aluno segue a ordem', () => {
     expect(cat.products.find((p) => p.id === 'trilha-ritmo')?.checkoutUrl).toBe('https://pay.exemplo.com/ritmo');
     expect(cat.tracks.find((t) => t.id === 'ritmo')?.priceLabel).toBe('R$ 297 por ano');
     expect((await demoApi.getLessonMedia('curso-teste--m1--a1'))?.mediaUrl).toBe('https://exemplo.com/v.mp4');
+    await demoApi.adminSaveStoreItem({ id: 'garrafa', trackId: 'move', title: 'Garrafa', description: '', priceLabel: 'R$ 59', imageUrl: null, checkoutUrl: 'https://pay.exemplo.com/g', active: true, sort: 99 });
+    expect((await demoApi.getCatalog()).storeItems.find((i) => i.id === 'garrafa')?.checkoutUrl).toBe('https://pay.exemplo.com/g');
+    await demoApi.adminDeleteStoreItem('garrafa');
     await demoApi.adminDeleteCourse('curso-teste');
     expect((await demoApi.getCatalog()).courses.some((c) => c.id === 'curso-teste')).toBe(false);
   });

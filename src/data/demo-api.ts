@@ -85,6 +85,7 @@ const cat = {
   lessons: seedCatalog.lessons.map((l) => ({ ...l })),
   media: seedCatalog.lessonMedia.map((m) => ({ ...m })),
   checkouts: {} as Record<string, string | null>,
+  storeItems: seedCatalog.storeItems.map((x) => ({ ...x })),
 };
 
 function requireAdmin() {
@@ -270,6 +271,7 @@ export const demoApi: Api = {
       modules: cat.modules.map((m) => ({ ...m })),
       lessons: cat.lessons.map((l) => ({ ...l })),
       products: deriveProducts(cat.tracks, cat.courses, cat.checkouts),
+      storeItems: cat.storeItems.filter((x) => x.active || state.profile?.role === 'admin').map((x) => ({ ...x })),
     };
   },
   async getMyCourseIds() {
@@ -703,6 +705,16 @@ export const demoApi: Api = {
       const item = list.find((x) => x.id === id);
       if (item) item.sort = i + 1;
     });
+  },
+  async adminSaveStoreItem(item) {
+    requireAdmin();
+    await wait();
+    upsert(cat.storeItems, { ...item });
+  },
+  async adminDeleteStoreItem(id) {
+    requireAdmin();
+    await wait();
+    cat.storeItems = cat.storeItems.filter((x) => x.id !== id);
   },
   async adminSetCheckout(productId, checkoutUrl) {
     requireAdmin();

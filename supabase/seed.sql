@@ -1054,6 +1054,18 @@ on conflict (product_id, course_id) do nothing;
 -- Produtos antigos (assinatura geral e venda de curso avulso da trilha) saem da vitrine.
 update public.products p set active = false where p.id = 'assinatura-vivah'
   or exists (select 1 from public.courses c where c.id = p.id and not c.low_ticket);
+insert into public.store_items (id, track_id, title, description, price_label, active, sort) values
+  ('camiseta-vivah', null, 'Camiseta Vivah', 'Algodão, estampa "um passo de cada vez". Tamanhos P ao GG.', 'R$ 89', true, 1),
+  ('caneca-vivah', null, 'Caneca Vivah', 'Cerâmica, 350 ml, para o café da pausa consciente.', 'R$ 49', true, 2),
+  ('diario-mente-quieta', 'respira', 'Diário Mente Quieta', 'Caderno de 90 dias com horário da preocupação, diário do sono e três coisas boas.', 'R$ 69', true, 3),
+  ('planner-ritmo-2027', 'ritmo', 'Planner Ritmo 2027', 'Planner anual com prioridades do dia, blocos de foco e revisão semanal.', 'R$ 99', true, 4),
+  ('caderno-de-conquistas', 'eleva', 'Caderno de Conquistas', 'Para anotar vitórias, metas do trimestre e feedbacks.', 'R$ 59', true, 5),
+  ('envelopes-do-orcamento', 'prospera', 'Kit Envelopes do Orçamento', 'Envelopes e fichas para o método 50-30-20 no papel.', 'R$ 39', true, 6),
+  ('garrafa-move', 'move', 'Garrafa Move 1 litro', 'Com marcação de horários para bater a meta de água.', 'R$ 59', true, 7),
+  ('kit-elasticos', 'move', 'Kit de elásticos', 'Três intensidades, para os treinos em casa.', 'R$ 79', true, 8),
+  ('kit-marmitas', 'nutre', 'Kit Marmitas de Vidro', 'Quatro potes que vão ao micro-ondas e ao freezer.', 'R$ 119', true, 9)
+on conflict (id) do nothing;
+
 insert into public.diagnostic_questions (id, area, prompt, options, sort) values
   ('q1', 'mente', 'Com que frequência sua cabeça fica presa nos mesmos pensamentos?', '[{"label":"Quase nunca","score":0},{"label":"Às vezes","score":1},{"label":"Com frequência","score":2},{"label":"O tempo todo","score":3}]'::jsonb, 1),
   ('q2', 'mente', 'Como tem sido o seu sono nas últimas semanas?', '[{"label":"Durmo bem","score":0},{"label":"Durmo bem na maioria das noites","score":1},{"label":"Durmo mal com frequência","score":2},{"label":"Quase nunca durmo bem","score":3}]'::jsonb, 2),

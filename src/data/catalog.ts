@@ -17,6 +17,7 @@ import type {
   LowTicketFormat,
   Module,
   Product,
+  StoreItem,
   Track,
 } from './types';
 import { rewardCourseTrack, TRACK_REWARDS } from '../domain/rewards';
@@ -772,6 +773,25 @@ export const products: Product[] = [
   ...sellable()
     .filter((x) => x.lowTicket)
     .map((course) => ({ id: course.id, name: course.title, hotmartProductId: null, checkoutUrl: null, courseIds: [course.id] })),
+];
+
+/**
+ * Loja: produtos físicos da Vivah (exemplos para o time trocar na página de admin).
+ * Preço e link de pagamento são definidos lá; sem link, o produto aparece como "em breve".
+ */
+const item = (id: string, trackId: string | null, title: string, description: string, priceLabel: string, sort: number): StoreItem => ({
+  id, trackId, title, description, priceLabel, imageUrl: null, checkoutUrl: null, active: true, sort,
+});
+export const storeItems: StoreItem[] = [
+  item('camiseta-vivah', null, 'Camiseta Vivah', 'Algodão, estampa "um passo de cada vez". Tamanhos P ao GG.', 'R$ 89', 1),
+  item('caneca-vivah', null, 'Caneca Vivah', 'Cerâmica, 350 ml, para o café da pausa consciente.', 'R$ 49', 2),
+  item('diario-mente-quieta', 'respira', 'Diário Mente Quieta', 'Caderno de 90 dias com horário da preocupação, diário do sono e três coisas boas.', 'R$ 69', 3),
+  item('planner-ritmo-2027', 'ritmo', 'Planner Ritmo 2027', 'Planner anual com prioridades do dia, blocos de foco e revisão semanal.', 'R$ 99', 4),
+  item('caderno-de-conquistas', 'eleva', 'Caderno de Conquistas', 'Para anotar vitórias, metas do trimestre e feedbacks.', 'R$ 59', 5),
+  item('envelopes-do-orcamento', 'prospera', 'Kit Envelopes do Orçamento', 'Envelopes e fichas para o método 50-30-20 no papel.', 'R$ 39', 6),
+  item('garrafa-move', 'move', 'Garrafa Move 1 litro', 'Com marcação de horários para bater a meta de água.', 'R$ 59', 7),
+  item('kit-elasticos', 'move', 'Kit de elásticos', 'Três intensidades, para os treinos em casa.', 'R$ 79', 8),
+  item('kit-marmitas', 'nutre', 'Kit Marmitas de Vidro', 'Quatro potes que vão ao micro-ondas e ao freezer.', 'R$ 119', 9),
 ];
 
 /** Temas das lives semanais (quarta, 20h). Dezembro e janeiro: só a trilha Mente. */

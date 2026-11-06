@@ -158,6 +158,7 @@ const respira: Program = {
       { id: 'coisasBoas', type: 'list', label: 'Três coisas boas de hoje', max: 3, placeholder: 'Algo que deu certo, por menor que seja' },
     ],
   },
+  // O Socorro (botão no topo e atalho aqui) existe só na Respira.
   tools: [
     { label: 'Socorro', icon: 'life-buoy', route: 'socorro' },
     { label: 'Respiração 4-6', icon: 'wind', route: 'exercicio', exercise: 'respiracao' },
@@ -594,10 +595,7 @@ const aquecimento: Program = {
       { id: 'dia', type: 'scale5', label: 'Como foi o dia' },
     ],
   },
-  tools: [
-    { label: 'Socorro', icon: 'life-buoy', route: 'socorro' },
-    { label: 'Escudo do dia', icon: 'shield', route: 'escudo' },
-  ],
+  tools: [{ label: 'Escudo do dia', icon: 'shield', route: 'escudo' }],
   community: {
     ajuda: 'Mensagem de ajuda',
     conselho: 'Frase ou conselho de ajuda',

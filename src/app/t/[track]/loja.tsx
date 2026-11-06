@@ -1,11 +1,12 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { KindnessSeal, LessonBadge, SealCaption } from '@/components/badges';
 import { SpaceHeader, spaceIcon } from '@/components/space';
+import { StoreProducts } from '@/components/store';
 import { Button, Card, ErrorState, Icon, type IconName, ProgressBar, Row, Screen, Txt } from '@/components/ui';
-import { FadeIn, ScreenSkeleton } from '@/components/visual';
+import { FadeIn } from '@/components/visual';
 import { useLibrary, usePointEvents, usePointsSummary, useProgress, useRedeem, useRedemptions } from '@/data/hooks';
 import type { PointKind } from '@/data/types';
 import { trackBadge } from '@/domain/badges';
@@ -23,8 +24,42 @@ import { colors, fonts, radius, space } from '@/theme';
 const KIND_ICON: Record<PointKind, IconName> = { curtida: 'heart', agradecimento: 'gift', ajuda: 'message-circle', conselho: 'edit-3', apoio: 'users' };
 const REWARD_ICON: Record<TrackReward['kind'], IconName> = { digital: 'play-circle', experiencia: 'video', fisico: 'package', acesso: 'star' };
 
+type Aba = 'produtos' | 'pontos';
+
+/**
+ * Loja da trilha, com duas partes que não se misturam:
+ * - Produtos: itens físicos que a Vivah vende (pagamento fora do app);
+ * - Resgatar com pontos: recompensas da bondade (saldo, selos, catálogo e extrato).
+ */
+export default function Loja() {
+  const sp = useSpace();
+  const { aba } = useLocalSearchParams<{ aba?: string }>();
+  const tab: Aba = aba === 'pontos' ? 'pontos' : 'produtos';
+  const library = useLibrary();
+  const summary = usePointsSummary(sp.id);
+  return (
+    <Screen refreshing={library.isRefetching || summary.isRefetching} onRefresh={() => { library.refetch(); summary.refetch(); }}>
+      <SpaceHeader space={sp} />
+      <View style={{ gap: 4 }}>
+        <Txt variant="eyebrow">Loja · {sp.title}</Txt>
+        <Txt variant="hero">{tab === 'produtos' ? 'Produtos Vivah' : 'Sua bondade vale prêmios'}</Txt>
+      </View>
+      <View style={styles.segment} accessibilityRole="tablist">
+        {([['produtos', 'Produtos', 'shopping-bag'], ['pontos', 'Resgatar pontos', 'gift']] as const).map(([id, label, icon]) => (
+          <Pressable key={id} onPress={() => router.setParams({ aba: id })} accessibilityRole="tab" accessibilityState={{ selected: tab === id }}
+            style={[styles.segmentItem, tab === id && styles.segmentOn]}>
+            <Icon name={icon} size={16} color={tab === id ? colors.onDark : colors.petrol} />
+            <Txt variant="bodyStrong" style={{ fontSize: 14, color: tab === id ? colors.onDark : colors.petrol }}>{label}</Txt>
+          </Pressable>
+        ))}
+      </View>
+      {tab === 'produtos' ? <StoreProducts trackId={sp.id} /> : <PointsRewards />}
+    </Screen>
+  );
+}
+
 /** Recompensas da trilha: saldo, selos, como pontuar, catálogo e extrato. */
-export default function Recompensas() {
+function PointsRewards() {
   const sp = useSpace();
   const summary = usePointsSummary(sp.id);
   const events = usePointEvents(sp.id);
@@ -34,7 +69,7 @@ export default function Recompensas() {
   const progress = useProgress();
   const [showRefused, setShowRefused] = useState(false);
 
-  if (summary.isPending || library.isPending) return <ScreenSkeleton />;
+  if (summary.isPending || library.isPending) return <Txt variant="small">Carregando…</Txt>;
   if (summary.error || !summary.data) return <ErrorState error={summary.error} onRetry={summary.refetch} />;
   const s = summary.data;
   const prog = progressToNext(s.earned, s.givers);
@@ -57,12 +92,7 @@ export default function Recompensas() {
   };
 
   return (
-    <Screen refreshing={summary.isRefetching} onRefresh={() => { summary.refetch(); events.refetch(); redemptions.refetch(); }}>
-      <SpaceHeader space={sp} />
-      <View style={{ gap: 4 }}>
-        <Txt variant="eyebrow">Recompensas · {sp.title}</Txt>
-        <Txt variant="hero">Sua bondade vale prêmios</Txt>
-      </View>
+    <>
 
       <FadeIn>
         <View style={styles.hero}>
@@ -210,7 +240,7 @@ export default function Recompensas() {
         </Row>
         <Txt variant="small" style={{ color: colors.onDarkMuted }}>No nível Farol você abre o seu espaço para aconselhar outras pessoas.</Txt>
       </Card>
-    </Screen>
+    </>
   );
 }
 
@@ -224,6 +254,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  segment: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  segmentItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: space.sm, borderRadius: radius.pill },
+  segmentOn: { backgroundColor: colors.petrol },
   hero: { backgroundColor: colors.deep, borderRadius: radius.lg, padding: space.xl, alignItems: 'center', gap: 2 },
   balance: { fontFamily: fonts.display, fontSize: 56, lineHeight: 64, color: colors.onDark },
   bar: { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' },

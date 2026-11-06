@@ -12,10 +12,12 @@ import { tap } from '@/lib/haptics';
 import { TrackContextBar } from '@/components/space';
 import { colors, radius, shadow, space } from '@/theme';
 
-/** Botão "Socorro": exercícios guiados para a hora do aperto, sempre grátis. */
+/** Socorro da Respira: exercícios guiados para a hora do aperto, sempre grátis. */
 export default function Socorro() {
-  const { track, ex } = useLocalSearchParams<{ track?: string; ex?: string }>();
-  const ids = SOS_BY_TRACK[track ?? AQUECIMENTO] ?? SOS_BY_TRACK[AQUECIMENTO];
+  const { ex } = useLocalSearchParams<{ ex?: string }>();
+  // O Socorro é da trilha Respira (o botão só aparece lá).
+  const track = 'respira';
+  const ids = SOS_BY_TRACK[track] ?? SOS_BY_TRACK[AQUECIMENTO];
   const options = ids.map(exerciseById).filter((e) => e !== undefined);
   const [selected, setSelected] = useState<string | null>(ex ?? null);
   const [finished, setFinished] = useState(false);
@@ -25,7 +27,7 @@ export default function Socorro() {
 
   return (
     <Screen padTop={false}>
-      <TrackContextBar trackId={track ?? AQUECIMENTO} />
+      <TrackContextBar trackId={track} />
       <View style={{ gap: space.xs }}>
         <Txt variant="eyebrow">Socorro</Txt>
         <Txt variant="hero">Respire. Você está seguro aqui.</Txt>
@@ -39,8 +41,8 @@ export default function Socorro() {
             onDone={() => {
               setFinished(true);
               log.mutate({ kind: 'foco', ref: `socorro-${current.id}`, minutes: 3 });
-              // Na Respira, os minutos entram no painel (Respiração e pausas).
-              if (track === 'respira') panel.add.mutate({ trackId: 'respira', metric: 'respiracao', delta: 3 });
+              // Os minutos entram no painel da Respira (Respiração e pausas).
+              panel.add.mutate({ trackId: 'respira', metric: 'respiracao', delta: 3 });
             }}
           />
         </FadeIn>

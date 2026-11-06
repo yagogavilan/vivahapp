@@ -57,7 +57,7 @@ export default function Conselheiros() {
         </View>
       ) : null}
 
-      <Card tone={canCounsel ? 'dark' : 'sand'} onPress={() => (canCounsel ? router.push({ pathname: '/conselheiro', params: { track } }) : router.push({ pathname: '/t/[track]/recompensas', params: { track } }))} style={{ gap: 4 }}>
+      <Card tone={canCounsel ? 'dark' : 'sand'} onPress={() => (canCounsel ? router.push({ pathname: '/conselheiro', params: { track } }) : router.push({ pathname: '/t/[track]/loja', params: { track, aba: 'pontos' } }))} style={{ gap: 4 }}>
         <Row gap={space.sm}>
           <Icon name="star" size={18} color={canCounsel ? '#F2C14E' : colors.coralText} />
           <Txt variant="bodyStrong" style={canCounsel ? { color: colors.onDark } : undefined}>

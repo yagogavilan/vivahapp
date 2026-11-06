@@ -96,7 +96,7 @@ export default function Comunidade() {
 
       {/* Bondade: nível, progresso e atalho para os conselheiros. */}
       <Row gap={space.sm} style={{ alignItems: 'stretch' }}>
-        <Pressable onPress={() => router.push({ pathname: '/t/[track]/recompensas', params: { track: sp.id } })} accessibilityRole="button" style={[styles.kind, shadow]}>
+        <Pressable onPress={() => router.push({ pathname: '/t/[track]/loja', params: { track: sp.id, aba: 'pontos' } })} accessibilityRole="button" style={[styles.kind, shadow]}>
           <Row style={{ justifyContent: 'space-between' }}>
             <LevelBadge level={k?.level ?? 1} showSeed />
             <Icon name="chevron-right" size={16} color={colors.textSubtle} />

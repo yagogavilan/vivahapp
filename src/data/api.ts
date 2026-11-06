@@ -35,6 +35,7 @@ import type {
   Post,
   Product,
   Profile,
+  StoreItem,
   Track,
 } from './types';
 
@@ -63,6 +64,7 @@ export interface Catalog {
   modules: Module[];
   lessons: Lesson[];
   products: Product[];
+  storeItems: StoreItem[];
 }
 
 /** Curso como o admin edita (o id é gerado no app a partir do título). */
@@ -204,4 +206,7 @@ export interface Api {
   adminReorder(kind: 'courses' | 'modules' | 'lessons', orderedIds: string[]): Promise<void>;
   /** Link de pagamento do produto (assinatura da trilha ou low ticket). */
   adminSetCheckout(productId: string, checkoutUrl: string | null): Promise<void>;
+  /** Loja: produtos físicos (criar ou editar). */
+  adminSaveStoreItem(item: StoreItem): Promise<void>;
+  adminDeleteStoreItem(id: string): Promise<void>;
 }

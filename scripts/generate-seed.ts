@@ -13,6 +13,7 @@ import {
   lessons,
   modules,
   products,
+  storeItems,
   tracks,
 } from '../src/data/catalog';
 import { KINDNESS_LEVELS } from '../src/domain/kindness';
@@ -80,6 +81,10 @@ const sql = [
   '-- Produtos antigos (assinatura geral e venda de curso avulso da trilha) saem da vitrine.',
   "update public.products p set active = false where p.id = 'assinatura-vivah'",
   '  or exists (select 1 from public.courses c where c.id = p.id and not c.low_ticket);',
+  // Loja: só cria os exemplos que faltam (o time edita na página de admin).
+  insert('store_items', storeItems.map((i) => ({
+    id: i.id, track_id: i.trackId, title: i.title, description: i.description, price_label: i.priceLabel, active: i.active, sort: i.sort,
+  })), 'id', true),
   insert('diagnostic_questions', diagnosticQuestions.map((q) => ({
     id: q.id, area: q.area, prompt: q.prompt, options: q.options, sort: q.sort,
   }))),

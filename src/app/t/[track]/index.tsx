@@ -108,7 +108,7 @@ export default function HojeDaTrilha() {
   };
   const openTool = (t: (typeof program.tools)[number]) => {
     if (t.route === 'socorro') go('/socorro');
-    if (t.route === 'exercicio') go('/socorro', { ex: t.exercise ?? 'respiracao' });
+    if (t.route === 'exercicio') go(sp.id === 'respira' ? '/socorro' : '/exercicio', { ex: t.exercise ?? 'respiracao' });
     if (t.route === 'foco') router.push('/foco');
     if (t.route === 'escudo' && audio) router.push({ pathname: '/escudo/[id]', params: { id: audio.id } });
   };

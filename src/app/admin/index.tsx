@@ -31,6 +31,15 @@ function AdminTracks() {
         <Txt>Escolha a trilha para cadastrar cursos, módulos, aulas e low tickets, e para definir o preço e o link de pagamento. As mudanças valem na hora para os alunos.</Txt>
       </View>
 
+      <Card onPress={() => router.push('/admin/loja')} style={{ gap: 4 }}>
+        <Row gap={space.sm}>
+          <Icon name="shopping-bag" size={18} color={colors.coralText} />
+          <Txt variant="heading" style={{ flex: 1 }}>Loja: produtos físicos</Txt>
+          <Icon name="chevron-right" size={18} color={colors.textSubtle} />
+        </Row>
+        <Txt variant="small">{lib.storeItems.length} produtos · {lib.storeItems.filter((i) => i.active && !i.checkoutUrl).length} sem link de pagamento</Txt>
+      </Card>
+
       {lib.tracks.map((t) => {
         const cs = trackCourses(t.id, lib.courses);
         const lows = lowTicketsOf(t.id, lib.courses);

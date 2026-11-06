@@ -30,7 +30,7 @@ export default function MeuEspaco() {
       <Screen padTop={false}>
         <Txt variant="hero">O espaço de conselheiro abre no nível {levelInfo(COUNSELOR_LEVEL).name}</Txt>
         <Txt>Continue acolhendo pessoas na comunidade. Cada obrigado que você recebe te aproxima.</Txt>
-        <Button label="Ver os níveis" icon="award" onPress={() => router.replace({ pathname: '/t/[track]/recompensas', params: { track } })} />
+        <Button label="Ver os níveis" icon="award" onPress={() => router.replace({ pathname: '/t/[track]/loja', params: { track, aba: 'pontos' } })} />
       </Screen>
     );
   }

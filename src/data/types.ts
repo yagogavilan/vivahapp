@@ -72,6 +72,20 @@ export interface LessonMedia {
   body: string | null;
 }
 
+/** Produto físico da loja (vendido fora do app, com checkout próprio). Não confundir com recompensas de pontos. */
+export interface StoreItem {
+  id: string;
+  /** null = aparece em todas as trilhas. */
+  trackId: string | null;
+  title: string;
+  description: string;
+  priceLabel: string | null;
+  imageUrl: string | null;
+  checkoutUrl: string | null;
+  active: boolean;
+  sort: number;
+}
+
 export interface Product {
   id: string;
   name: string;

@@ -191,6 +191,8 @@ do $$ declare blocked boolean; begin
   update public.products set checkout_url = 'https://pay.exemplo.com/respira' where id = 'trilha-respira';
   assert (select checkout_url from public.products where id = 'trilha-respira') is not null, 'admin cadastra o link de pagamento';
   assert public.can_read_lesson('mente-silenciosa--m1--a4'), 'admin abre qualquer aula, sem sequência';
+  insert into public.store_items (id, track_id, title, price_label, checkout_url) values ('garrafa-teste', 'move', 'Garrafa', 'R$ 59', 'https://pay.exemplo.com/garrafa');
+  update public.store_items set active = false where id = 'camiseta-vivah';
   blocked := false;
   begin delete from public.courses where id = 'protocolo-desligando-a-mente'; exception when others then blocked := true; end;
   assert blocked, 'curso já vendido não pode ser apagado';
@@ -208,6 +210,10 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a","email":"ana@exemplo.com","role":"authenticated"}';
 do $$ begin
   assert public.has_course_access('curso-novo'), 'assinante recebe os cursos novos da trilha';
+  assert exists (select 1 from public.store_items where id = 'garrafa-teste'), 'aluna vê o produto novo da loja';
+  assert not exists (select 1 from public.store_items where id = 'camiseta-vivah'), 'produto oculto não aparece para a aluna';
+  update public.store_items set price_label = 'R$ 1' where id = 'garrafa-teste';
+  assert (select price_label from public.store_items where id = 'garrafa-teste') = 'R$ 59', 'aluna não muda preço da loja';
 end $$;
 commit;
 
