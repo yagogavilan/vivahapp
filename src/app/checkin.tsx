@@ -25,7 +25,7 @@ import {
 } from '@/domain/checkin-protocol';
 import { addDays, dayKey } from '@/domain/dates';
 import { exerciseById } from '@/domain/exercises';
-import { AQUECIMENTO, spaceFor } from '@/domain/spaces';
+import { FIRST_TRACK, spaceFor } from '@/domain/spaces';
 import { success, tap } from '@/lib/haptics';
 import { colors, radius, space } from '@/theme';
 
@@ -41,7 +41,7 @@ const LEVEL_STYLE: Record<CheckinReading['level'], { bg: string; fg: string; sub
  */
 export default function CheckinScreen() {
   const params = useLocalSearchParams<{ track?: string; mood?: string }>();
-  const trackId = params.track ?? AQUECIMENTO;
+  const trackId = params.track ?? FIRST_TRACK;
   const { profile } = useSession();
   const library = useLibrary();
   const checkin = useTodayCheckin(trackId);

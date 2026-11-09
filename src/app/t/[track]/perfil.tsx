@@ -10,7 +10,7 @@ import { KindnessSeal, LessonBadge } from '@/components/badges';
 import { spaceIcon } from '@/components/space';
 import { trackBadge } from '@/domain/badges';
 import { levelInfo } from '@/domain/kindness';
-import { AQUECIMENTO, spaceAccess, spaceFor } from '@/domain/spaces';
+import { spaceAccess, spaceFor } from '@/domain/spaces';
 import { formatShortDate } from '@/domain/dates';
 import { confirm } from '@/lib/dialogs';
 import { useSpace } from '@/lib/space-context';
@@ -40,7 +40,7 @@ export default function Perfil() {
   const progress = useProgress();
   const lessonsDone = (progress.data ?? []).filter((p) => p.completedAt).length;
 
-  const spaceIds = [AQUECIMENTO, ...(library.data?.tracks ?? []).slice().sort((a, b) => a.sort - b.sort).map((t) => t.id)];
+  const spaceIds = [...(library.data?.tracks ?? []).slice().sort((a, b) => a.sort - b.sort).map((t) => t.id)];
   const summaries = useAllPointsSummaries(spaceIds);
 
   const myCourses = library.data?.courses.filter((c) => !c.isFree && library.data!.access.has(c.id)) ?? [];
@@ -67,7 +67,7 @@ export default function Perfil() {
             {spaceIds.map((id, i) => {
               const s = spaceFor(id, library.data!.tracks)!;
               const lvl = summaries[i]?.data?.level ?? 1;
-              const badge = id === AQUECIMENTO ? null : trackBadge(id, library.data!.courses, library.data!.lessons, progress.data ?? []);
+              const badge = trackBadge(id, library.data!.courses, library.data!.lessons, progress.data ?? []);
               const owned = spaceAccess(id, library.data!.tracks, library.data!.courses, library.data!.access) === 'open';
               return (
                 <View key={id} style={{ width: 150, alignItems: 'center', gap: 6, paddingVertical: space.sm }}>

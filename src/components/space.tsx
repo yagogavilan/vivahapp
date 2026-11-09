@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
@@ -13,17 +12,12 @@ import { BellButton } from './inbox';
 import { TrackCover } from './visual';
 
 export function spaceIcon(s: Pick<Space, 'area'>): IconName {
-  return s.area ? AREA_ICON[s.area] : 'sunrise';
+  return AREA_ICON[s.area];
 }
 
-/** Capa do espaço: a da trilha ou, no Aquecimento, um degradê coral. */
+/** Capa do espaço: a cor da trilha. */
 export function SpaceCover({ space, children, style, muted }: { space: Pick<Space, 'area'>; children?: ReactNode; style?: ViewStyle; muted?: boolean }) {
-  if (space.area) return <TrackCover area={space.area} muted={muted} style={style}>{children}</TrackCover>;
-  return (
-    <LinearGradient colors={['#F2A27F', '#F2A27F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.cover, style]}>
-      {children}
-    </LinearGradient>
-  );
+  return <TrackCover area={space.area} muted={muted} style={style}>{children}</TrackCover>;
 }
 
 /**
@@ -43,18 +37,18 @@ export function SpaceHeader({ space, right }: { space: Space; right?: ReactNode 
         style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
         <SpaceCover space={space} style={styles.banner}>
           <View style={styles.bannerIcon}>
-            <Icon name={spaceIcon(space)} size={18} color={space.area ? colors.coral : colors.deep} />
+            <Icon name={spaceIcon(space)} size={18} color={colors.coral} />
           </View>
           <View style={{ flex: 1 }}>
-            <Txt variant="small" style={{ color: space.area ? colors.onDarkMuted : colors.deep, fontSize: 12, lineHeight: 16 }}>Você está na trilha</Txt>
-            <Txt variant="bodyStrong" style={{ color: space.area ? colors.onDark : colors.deep, fontSize: 17 }} numberOfLines={1}>
+            <Txt variant="small" style={{ color: colors.onDarkMuted, fontSize: 12, lineHeight: 16 }}>Você está na trilha</Txt>
+            <Txt variant="bodyStrong" style={{ color: colors.onDark, fontSize: 17 }} numberOfLines={1}>
               {space.title}
-              <Txt variant="small" style={{ color: space.area ? colors.onDarkMuted : colors.deep, fontSize: 13 }}>{space.track ? `  ${space.track.areaLabel}` : '  grátis'}</Txt>
+              <Txt variant="small" style={{ color: colors.onDarkMuted, fontSize: 13 }}>{`  ${space.track.areaLabel}`}</Txt>
             </Txt>
           </View>
           <View style={{ alignItems: 'center' }}>
-            <Icon name="repeat" size={16} color={space.area ? colors.onDarkMuted : colors.deep} />
-            <Txt variant="small" style={{ color: space.area ? colors.onDarkMuted : colors.deep, fontSize: 11, lineHeight: 14 }}>Trocar</Txt>
+            <Icon name="repeat" size={16} color={colors.onDarkMuted} />
+            <Txt variant="small" style={{ color: colors.onDarkMuted, fontSize: 11, lineHeight: 14 }}>Trocar</Txt>
           </View>
         </SpaceCover>
       </Pressable>
@@ -86,7 +80,7 @@ export function TrackContextBar({ trackId }: { trackId: string }) {
       accessibilityRole="button"
       accessibilityLabel={`Trilha ${space.title}`}
       style={styles.context}>
-      <View style={[styles.contextDot, { backgroundColor: space.area ? colors.petrol : colors.coral }]}>
+      <View style={[styles.contextDot, { backgroundColor: colors.petrol }]}>
         <Icon name={spaceIcon(space)} size={12} color={colors.onDark} />
       </View>
       <Txt variant="small" style={{ color: colors.text, fontSize: 13 }}>
@@ -97,7 +91,6 @@ export function TrackContextBar({ trackId }: { trackId: string }) {
 }
 
 const styles = StyleSheet.create({
-  cover: { borderRadius: radius.lg, padding: sp.xl, overflow: 'hidden' },
   watermark: { position: 'absolute', right: -6, bottom: -10 },
   banner: { flexDirection: 'row', alignItems: 'center', gap: sp.md, paddingVertical: sp.md, paddingHorizontal: sp.md, borderRadius: radius.md },
   bannerIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },

@@ -15,7 +15,6 @@ import { COUNSELOR_LEVEL, levelInfo, progressToNext } from '@/domain/kindness';
 import { DAILY_CAP, DAILY_COUNT, formatPoints, MAX_POINTS_PER_DAY, POINT_KINDS, POINTS, STATUS_LABEL } from '@/domain/points';
 import { pointLabel } from '@/domain/programs';
 import { monthsOf, rewardsOf, type TrackReward } from '@/domain/rewards';
-import { AQUECIMENTO } from '@/domain/spaces';
 import { confirm, notify } from '@/lib/dialogs';
 import { success } from '@/lib/haptics';
 import { useSpace } from '@/lib/space-context';
@@ -75,7 +74,7 @@ function PointsRewards() {
   const lvl = levelInfo(Math.min(8, s.level));
   const mine = new Map((redemptions.data ?? []).filter((r) => r.status !== 'cancelado').map((r) => [r.rewardId, r]));
   const rewards = rewardsOf(sp.id).sort((a, b) => Number(a.kind === 'acesso') - Number(b.kind === 'acesso') || a.cost - b.cost);
-  const badge = library.data && sp.id !== AQUECIMENTO ? trackBadge(sp.id, library.data.courses, library.data.lessons, progress.data ?? []) : null;
+  const badge = library.data ? trackBadge(sp.id, library.data.courses, library.data.lessons, progress.data ?? []) : null;
   const list = (events.data ?? []).filter((e) => showRefused || e.status !== 'recusado').slice(0, 30);
 
   const doRedeem = async (r: TrackReward) => {

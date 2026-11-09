@@ -34,9 +34,9 @@ select a.id, l.id, 300, now() - (l.rn || ' hours')::interval, now()
   join lateral (select id, row_number() over (order by id) rn from public.lessons order by id limit 15) l on true;
 
 -- Comunidade: 40 mil posts em 90 dias, 120 mil comentários, 400 mil curtidas, 60 mil agradecimentos
-create temp table canais as select unnest(array['aquecimento','respira','ritmo','eleva','prospera','move','nutre']) as c;
+create temp table canais as select unnest(array['respira','ritmo','eleva','prospera','move','nutre']) as c;
 insert into public.posts (id, channel, author_id, author_name, body, kind, feeling, created_at)
-select gen_random_uuid(), (array['aquecimento','respira','respira','respira','ritmo','eleva','prospera','move','nutre'])[1 + g % 9],
+select gen_random_uuid(), (array['respira','respira','respira','ritmo','eleva','prospera','move','nutre'])[1 + g % 8],
        a.id, 'Aluno', 'Post de carga número ' || g || '. Hoje foi um dia de aprendizado e quero compartilhar com vocês.',
        (array['desabafo','conquista','apoio','dica'])[1 + g % 4], null, now() - ((g % 129600) || ' minutes')::interval
   from generate_series(1::bigint, 40000) g join alunos a on a.n = 1 + (g * 7919) % 10000;
@@ -62,7 +62,7 @@ on conflict do nothing;
 
 -- Extrato de pontos: 1 milhão de eventos (100 por aluno em média, concentrados nos mais ativos)
 insert into public.point_events (user_id, actor_id, track_id, kind, points, status, day, created_at)
-select a.id, b.id, (array['aquecimento','respira','ritmo','eleva','prospera','move','nutre'])[1 + g % 7],
+select a.id, b.id, (array['respira','ritmo','eleva','prospera','move','nutre'])[1 + g % 6],
        (array['curtida','agradecimento','ajuda','conselho','apoio'])[1 + g % 5], 1 + g % 5,
        case when g % 11 = 0 then 'recusado' else 'valido' end,
        (now() - ((g % 90) || ' days')::interval)::date, now() - ((g % 90) || ' days')::interval

@@ -4,7 +4,7 @@ import { courses, tracks } from '../src/data/catalog';
 import { questionsFor, readCheckin } from '../src/domain/checkin-protocol';
 import { EXERCISES, exerciseById, SOS_BY_TRACK } from '../src/domain/exercises';
 import { buildJourney } from '../src/domain/journey';
-import { AQUECIMENTO, spaceAccess, spaceFor, trackCourses } from '../src/domain/spaces';
+import { canEnterSpace, FIRST_TRACK, spaceAccess, spaceFor, trackCourses } from '../src/domain/spaces';
 
 const t = (giverId: string, iso: string, points = 10) => ({ giverId, receiverId: 'eu', points, createdAt: iso });
 
@@ -14,7 +14,7 @@ describe('check-in por trilha', () => {
   it('cada trilha tem as perguntas comuns e as suas', () => {
     expect(questionsFor('respira').map((q) => q.id)).toContain('anxiety');
     expect(questionsFor('ritmo').map((q) => q.id)).toContain('overload');
-    expect(questionsFor('aquecimento').map((q) => q.id)).toContain('feeling');
+    expect(questionsFor('nutre').map((q) => q.id)).toContain('feeling');
   });
 
   it('ansiedade alta vira socorro na hora com respiração e aterramento', () => {
@@ -54,8 +54,10 @@ describe('check-in por trilha', () => {
 });
 
 describe('espaços e jornada', () => {
-  it('Aquecimento sempre abre; trilha só com compra', () => {
-    expect(spaceAccess(AQUECIMENTO, tracks, courses, new Set())).toBe('open');
+  it('não existe mais a área grátis: só as seis trilhas, e a trilha abre com a assinatura', () => {
+    expect(spaceFor('aquecimento', tracks)).toBeUndefined();
+    expect(canEnterSpace('aquecimento', tracks)).toBe(false);
+    expect(FIRST_TRACK).toBe([...tracks].sort((a, b) => a.sort - b.sort)[0].id);
     expect(spaceAccess('respira', tracks, courses, new Set())).toBe('locked');
     expect(spaceAccess('respira', tracks, courses, new Set(['protocolo-desligando-a-mente']))).toBe('open');
     expect(spaceAccess('ritmo', tracks, courses, new Set(['semana-organizada']))).toBe('open');

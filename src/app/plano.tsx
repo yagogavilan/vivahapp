@@ -8,14 +8,14 @@ import { useDailyLogs, useSaveDailyLog, useTodayCheckin } from '@/data/hooks';
 import type { DailyLog, LogValues } from '@/data/types';
 import { dayKey } from '@/domain/dates';
 import { programFor } from '@/domain/programs';
-import { AQUECIMENTO } from '@/domain/spaces';
+import { FIRST_TRACK } from '@/domain/spaces';
 import { success } from '@/lib/haptics';
 import { TrackContextBar } from '@/components/space';
 import { colors, space } from '@/theme';
 
 /** Plano do dia da trilha, com a validação acontecendo enquanto a pessoa preenche. */
 export default function Plano() {
-  const { track = AQUECIMENTO } = useLocalSearchParams<{ track?: string }>();
+  const { track = FIRST_TRACK } = useLocalSearchParams<{ track?: string }>();
   const logs = useDailyLogs(track, 2);
   if (logs.isPending) return <Loading />;
   const today = logs.data?.find((l) => l.day === dayKey(new Date()) && l.kind === 'plano');

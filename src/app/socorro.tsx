@@ -7,7 +7,7 @@ import { Icon, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn } from '@/components/visual';
 import { useLogActivity, useTrackEntryMutations } from '@/data/hooks';
 import { exerciseById, EXERCISES, SOS_BY_TRACK } from '@/domain/exercises';
-import { AQUECIMENTO } from '@/domain/spaces';
+import { FIRST_TRACK } from '@/domain/spaces';
 import { tap } from '@/lib/haptics';
 import { TrackContextBar } from '@/components/space';
 import { colors, radius, shadow, space } from '@/theme';
@@ -17,7 +17,7 @@ export default function Socorro() {
   const { ex } = useLocalSearchParams<{ ex?: string }>();
   // O Socorro é da trilha Respira (o botão só aparece lá).
   const track = 'respira';
-  const ids = SOS_BY_TRACK[track] ?? SOS_BY_TRACK[AQUECIMENTO];
+  const ids = SOS_BY_TRACK[track] ?? SOS_BY_TRACK[FIRST_TRACK];
   const options = ids.map(exerciseById).filter((e) => e !== undefined);
   const [selected, setSelected] = useState<string | null>(ex ?? null);
   const [finished, setFinished] = useState(false);

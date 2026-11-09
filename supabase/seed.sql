@@ -5,10 +5,10 @@
 insert into public.tracks (id, title, area, area_label, subtitle, description, promise, teacher, status, launch_label, sort, price_label) values
   ('respira', 'Respira', 'mente', 'Mente', 'Ansiedade, pensar demais, sono e autoestima', 'Para quem sente que a cabeça não desliga. Práticas curtas para interromper a ruminação, dormir melhor e retomar o controle do dia.', 'Mente quieta, um dia por vez.', 'Edmilson', 'live', 'Disponível', 1, 'R$ 397 por ano'),
   ('ritmo', 'Ritmo', 'tempo', 'Gestão do tempo', 'Rotina, foco, prioridades e produtividade', 'Para quem termina o dia sem fazer o que importa. Um método simples de prioridades e uma rotina que cabe na vida real.', 'Uma rotina que cabe no seu dia.', 'Edmilson', 'live', 'Disponível', 2, 'R$ 397 por ano'),
-  ('eleva', 'Eleva', 'carreira', 'Carreira e negócios', 'Customer success, vendas, liderança e comunicação', 'Para quem quer crescer no trabalho com método: CS, vendas, retenção de clientes, liderança e posicionamento profissional.', 'Crescer no trabalho com método.', 'Especialistas convidados', 'live', 'Disponível', 3, 'R$ 397 por ano'),
-  ('prospera', 'Prospera', 'financas', 'Gestão financeira', 'Orçamento, dívidas, reserva e primeiros investimentos', 'Para quem ganha, mas não vê sobrar. Educação financeira prática para organizar o mês, sair das dívidas e montar a reserva.', 'O mês fecha no azul.', 'Especialista em finanças', 'live', 'Disponível', 4, 'R$ 397 por ano'),
-  ('move', 'Move', 'corpo', 'Corpo', 'Movimento, treino em casa, energia e postura', 'Para quem está parado e sem tempo para academia. Treinos curtos em casa, em três níveis, com educador físico (CREF).', 'Um corpo que se mexe todo dia.', 'Educador físico (CREF)', 'live', 'Disponível', 5, 'R$ 397 por ano'),
-  ('nutre', 'Nutre', 'alimentacao', 'Alimentação', 'Reeducação alimentar, rotina de refeições e compras', 'Para quem come mal na correria. Hábitos, cardápio da semana e lista de compras, com nutricionista (CRN), sem dieta da moda.', 'Comer bem sem complicar.', 'Nutricionista (CRN)', 'live', 'Disponível', 6, 'R$ 397 por ano')
+  ('move', 'Move', 'corpo', 'Corpo', 'Movimento, treino em casa, energia e postura', 'Para quem está parado e sem tempo para academia. Treinos curtos em casa, em três níveis, com educador físico (CREF).', 'Um corpo que se mexe todo dia.', 'Educador físico (CREF)', 'live', 'Disponível', 3, 'R$ 397 por ano'),
+  ('nutre', 'Nutre', 'alimentacao', 'Alimentação', 'Reeducação alimentar, rotina de refeições e compras', 'Para quem come mal na correria. Hábitos, cardápio da semana e lista de compras, com nutricionista (CRN), sem dieta da moda.', 'Comer bem sem complicar.', 'Nutricionista (CRN)', 'live', 'Disponível', 4, 'R$ 397 por ano'),
+  ('prospera', 'Prospera', 'financas', 'Gestão financeira', 'Orçamento, dívidas, reserva e primeiros investimentos', 'Para quem ganha, mas não vê sobrar. Educação financeira prática para organizar o mês, sair das dívidas e montar a reserva.', 'O mês fecha no azul.', 'Especialista em finanças', 'live', 'Disponível', 5, 'R$ 397 por ano'),
+  ('eleva', 'Eleva', 'carreira', 'Carreira e negócios', 'Customer success, vendas, liderança e comunicação', 'Para quem quer crescer no trabalho com método: CS, vendas, retenção de clientes, liderança e posicionamento profissional.', 'Crescer no trabalho com método.', 'Especialistas convidados', 'live', 'Disponível', 6, 'R$ 397 por ano')
 on conflict (id) do nothing;
 
 insert into public.kindness_levels (level, name, min_points, min_givers, meaning) values
@@ -89,9 +89,7 @@ insert into public.courses (id, track_id, title, kind, summary, price_label, sor
   ('premio-nutre-r2', 'nutre', 'Lista de compras inteligente', 'bonus', 'Comprar melhor, gastar menos e desperdiçar menos.', null, 64, false, false, null, true, false, null),
   ('premio-nutre-r3', 'nutre', 'Aula ao vivo de culinária prática', 'acompanhamento', 'Marmitas da semana em uma tarde, ao vivo.', null, 65, false, false, null, true, false, null),
   ('premio-nutre-r5', 'nutre', 'Orientação com nutricionista', 'acompanhamento', 'Conversa de 30 minutos para ajustar a sua rotina alimentar.', null, 66, false, false, null, true, false, null),
-  ('premio-nutre-r6', 'nutre', 'Acompanhamento Nutre por um mês', 'acompanhamento', 'Plano alimentar individual com retorno.', null, 67, false, false, null, true, false, null),
-  ('premio-aquecimento-r1', 'respira', 'Escudo bônus: 7 áudios extras', 'bonus', 'Uma semana de Escudo Anticrise exclusiva para quem ajuda.', null, 68, false, false, null, true, false, null),
-  ('premio-aquecimento-r2', 'respira', 'Sua pergunta respondida ao vivo', 'acompanhamento', 'O Edmilson responde a sua pergunta na próxima live, com o seu nome.', null, 69, false, false, null, true, false, null)
+  ('premio-nutre-r6', 'nutre', 'Acompanhamento Nutre por um mês', 'acompanhamento', 'Plano alimentar individual com retorno.', null, 67, false, false, null, true, false, null)
 on conflict (id) do nothing;
 
 insert into public.track_rewards (id, track_id, kind, title, description, cost, min_level, course_id) values
@@ -136,11 +134,7 @@ insert into public.track_rewards (id, track_id, kind, title, description, cost, 
   ('nutre-r4', 'nutre', 'fisico', 'Kit marmitas Vivah', 'Potes de vidro para levar comida de verdade.', 5700, 4, null),
   ('nutre-r5', 'nutre', 'experiencia', 'Orientação com nutricionista', 'Conversa de 30 minutos para ajustar a sua rotina alimentar.', 6840, 5, 'premio-nutre-r5'),
   ('nutre-r6', 'nutre', 'experiencia', 'Acompanhamento Nutre por um mês', 'Plano alimentar individual com retorno.', 13680, 7, 'premio-nutre-r6'),
-  ('nutre-conselheiro', 'nutre', 'acesso', 'Espaço de Conselheiro', 'No nível Farol você abre um espaço para as pessoas pedirem conselho a você. Não custa pontos.', 0, 6, null),
-  ('aquecimento-r1', 'aquecimento', 'digital', 'Escudo bônus: 7 áudios extras', 'Uma semana de Escudo Anticrise exclusiva para quem ajuda.', 1140, 1, 'premio-aquecimento-r1'),
-  ('aquecimento-r2', 'aquecimento', 'experiencia', 'Sua pergunta respondida ao vivo', 'O Edmilson responde a sua pergunta na próxima live, com o seu nome.', 2280, 2, 'premio-aquecimento-r2'),
-  ('aquecimento-r3', 'aquecimento', 'fisico', 'Marcador de página e carta do Edmilson', 'Marcador Vivah e uma carta escrita à mão, enviados para a sua casa.', 3420, 3, null),
-  ('aquecimento-conselheiro', 'aquecimento', 'acesso', 'Espaço de Conselheiro', 'No nível Farol você abre um espaço para as pessoas pedirem conselho a você. Não custa pontos.', 0, 6, null)
+  ('nutre-conselheiro', 'nutre', 'acesso', 'Espaço de Conselheiro', 'No nível Farol você abre um espaço para as pessoas pedirem conselho a você. Não custa pontos.', 0, 6, null)
 on conflict (id) do update set track_id = excluded.track_id, kind = excluded.kind, title = excluded.title, description = excluded.description, cost = excluded.cost, min_level = excluded.min_level, course_id = excluded.course_id;
 
 insert into public.modules (id, course_id, title, sort) values
@@ -260,9 +254,7 @@ insert into public.modules (id, course_id, title, sort) values
   ('premio-nutre-r2--m1', 'premio-nutre-r2', 'Conteúdo em produção', 1),
   ('premio-nutre-r3--m1', 'premio-nutre-r3', 'Conteúdo em produção', 1),
   ('premio-nutre-r5--m1', 'premio-nutre-r5', 'Conteúdo em produção', 1),
-  ('premio-nutre-r6--m1', 'premio-nutre-r6', 'Conteúdo em produção', 1),
-  ('premio-aquecimento-r1--m1', 'premio-aquecimento-r1', 'Conteúdo em produção', 1),
-  ('premio-aquecimento-r2--m1', 'premio-aquecimento-r2', 'Conteúdo em produção', 1)
+  ('premio-nutre-r6--m1', 'premio-nutre-r6', 'Conteúdo em produção', 1)
 on conflict (id) do nothing;
 
 insert into public.lessons (id, module_id, course_id, title, summary, kind, duration_min, sort, is_preview) values
@@ -620,9 +612,7 @@ insert into public.lessons (id, module_id, course_id, title, summary, kind, dura
   ('premio-nutre-r2--m1--a3', 'premio-nutre-r2--m1', 'premio-nutre-r2', 'Guardar', '', 'video', 12, 3, false),
   ('premio-nutre-r3--m1--a1', 'premio-nutre-r3--m1', 'premio-nutre-r3', 'Gravações das aulas', '', 'video', 12, 1, false),
   ('premio-nutre-r5--m1--a1', 'premio-nutre-r5--m1', 'premio-nutre-r5', 'Como agendar', '', 'video', 12, 1, false),
-  ('premio-nutre-r6--m1--a1', 'premio-nutre-r6--m1', 'premio-nutre-r6', 'Como funciona o acompanhamento', '', 'video', 12, 1, false),
-  ('premio-aquecimento-r1--m1--a1', 'premio-aquecimento-r1--m1', 'premio-aquecimento-r1', 'Áudios 1 a 7', '', 'video', 12, 1, false),
-  ('premio-aquecimento-r2--m1--a1', 'premio-aquecimento-r2--m1', 'premio-aquecimento-r2', 'Como enviar a pergunta', '', 'video', 12, 1, false)
+  ('premio-nutre-r6--m1--a1', 'premio-nutre-r6--m1', 'premio-nutre-r6', 'Como funciona o acompanhamento', '', 'video', 12, 1, false)
 on conflict (id) do nothing;
 
 insert into public.lesson_media (lesson_id, media_url, body) values
@@ -980,18 +970,16 @@ insert into public.lesson_media (lesson_id, media_url, body) values
   ('premio-nutre-r2--m1--a3', null, null),
   ('premio-nutre-r3--m1--a1', null, null),
   ('premio-nutre-r5--m1--a1', null, null),
-  ('premio-nutre-r6--m1--a1', null, null),
-  ('premio-aquecimento-r1--m1--a1', null, null),
-  ('premio-aquecimento-r2--m1--a1', null, null)
+  ('premio-nutre-r6--m1--a1', null, null)
 on conflict (lesson_id) do nothing;
 
 insert into public.products (id, name) values
   ('trilha-respira', 'Trilha Respira · anual'),
   ('trilha-ritmo', 'Trilha Ritmo · anual'),
-  ('trilha-eleva', 'Trilha Eleva · anual'),
-  ('trilha-prospera', 'Trilha Prospera · anual'),
   ('trilha-move', 'Trilha Move · anual'),
   ('trilha-nutre', 'Trilha Nutre · anual'),
+  ('trilha-prospera', 'Trilha Prospera · anual'),
+  ('trilha-eleva', 'Trilha Eleva · anual'),
   ('calma-em-5-minutos', 'Calma em 5 Minutos'),
   ('kit-descarrega-a-mente', 'Kit Descarrega a Mente'),
   ('diario-do-sono', 'Diário do Sono'),
@@ -1018,14 +1006,6 @@ insert into public.product_courses (product_id, course_id) values
   ('trilha-ritmo', 'dono-do-meu-tempo'),
   ('trilha-ritmo', 'foco-profundo'),
   ('trilha-ritmo', 'sistema-de-produtividade'),
-  ('trilha-eleva', 'carreira-em-ordem'),
-  ('trilha-eleva', 'comunicacao-que-convence'),
-  ('trilha-eleva', 'carreira-em-alta'),
-  ('trilha-eleva', 'maquina-de-clientes'),
-  ('trilha-prospera', 'mes-no-azul'),
-  ('trilha-prospera', 'fora-das-dividas'),
-  ('trilha-prospera', 'primeiros-investimentos'),
-  ('trilha-prospera', 'dinheiro-em-ordem'),
   ('trilha-move', 'corpo-em-movimento'),
   ('trilha-move', 'treino-em-casa-12-semanas'),
   ('trilha-move', 'academia-sem-medo'),
@@ -1034,6 +1014,14 @@ insert into public.product_courses (product_id, course_id) values
   ('trilha-nutre', 'comida-de-verdade'),
   ('trilha-nutre', 'reeducacao-alimentar'),
   ('trilha-nutre', 'nutricao-para-o-dia'),
+  ('trilha-prospera', 'mes-no-azul'),
+  ('trilha-prospera', 'fora-das-dividas'),
+  ('trilha-prospera', 'primeiros-investimentos'),
+  ('trilha-prospera', 'dinheiro-em-ordem'),
+  ('trilha-eleva', 'carreira-em-ordem'),
+  ('trilha-eleva', 'comunicacao-que-convence'),
+  ('trilha-eleva', 'carreira-em-alta'),
+  ('trilha-eleva', 'maquina-de-clientes'),
   ('calma-em-5-minutos', 'calma-em-5-minutos'),
   ('kit-descarrega-a-mente', 'kit-descarrega-a-mente'),
   ('diario-do-sono', 'diario-do-sono'),

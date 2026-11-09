@@ -14,7 +14,7 @@ const TIMES = ['07:00', '08:00', '12:00', '13:00', '18:00', '19:00', '20:00', '2
 
 /** Oferecer o apoio da trilha: marcar um horário ou montar algo para a pessoa. */
 export default function Apoio() {
-  const { post: postId, track = 'aquecimento' } = useLocalSearchParams<{ post: string; track?: string }>();
+  const { post: postId, track = 'respira' } = useLocalSearchParams<{ post: string; track?: string }>();
   const post = usePost(postId);
   const spec = programFor(track).community.apoio;
   const { offer } = useSupportMutations();

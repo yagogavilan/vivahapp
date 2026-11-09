@@ -606,7 +606,7 @@ export const supabaseApi: Api = {
     ) as Row[];
     return rows.map((r) => ({
       day: r.day,
-      trackId: r.track_id ?? 'aquecimento',
+      trackId: r.track_id ?? 'respira',
       answers: r.answers ?? {},
       feeling: r.feeling ?? null,
       alertLevel: r.alert_level ?? 'bem',

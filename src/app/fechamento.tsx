@@ -9,14 +9,14 @@ import { useDailyLogs, useSaveDailyLog } from '@/data/hooks';
 import type { DailyLog, LogValues } from '@/data/types';
 import { addDays, dayKey } from '@/domain/dates';
 import { programFor } from '@/domain/programs';
-import { AQUECIMENTO } from '@/domain/spaces';
+import { FIRST_TRACK } from '@/domain/spaces';
 import { success } from '@/lib/haptics';
 import { TrackContextBar } from '@/components/space';
 import { colors, fonts, radius, space } from '@/theme';
 
 /** Fechamento do dia: o teste da trilha, com nota de 0 a 100 e comparação. */
 export default function Fechamento() {
-  const { track = AQUECIMENTO } = useLocalSearchParams<{ track?: string }>();
+  const { track = FIRST_TRACK } = useLocalSearchParams<{ track?: string }>();
   const logs = useDailyLogs(track, 30);
   if (logs.isPending) return <Loading />;
   const t = dayKey(new Date());

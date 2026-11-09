@@ -132,7 +132,7 @@ export default function Curso() {
                         <Txt variant="bodyStrong" style={{ color: canOpen ? colors.text : colors.textSubtle }}>{l.title}</Txt>
                         <Txt variant="small">{seqLocked ? 'Conclua a aula anterior para abrir' : `${l.durationMin} min`}</Txt>
                       </View>
-                      {l.isPreview && state === 'locked' ? <Pill label="Aula grátis" tone="mint" /> : null}
+                      {l.isPreview && state === 'locked' ? <Pill label="Aula de amostra" tone="mint" /> : null}
                     </Row>
                   </Pressable>
                 );

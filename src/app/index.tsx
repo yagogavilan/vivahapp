@@ -4,20 +4,19 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { JourneyList, type JourneyItemInfo } from '@/components/journey-list';
-import { SpaceCover } from '@/components/space';
 import { BellButton } from '@/components/inbox';
 import { ErrorState, Icon, Logo, Row, Screen, Txt } from '@/components/ui';
-import { FadeIn, ScreenSkeleton } from '@/components/visual';
+import { ScreenSkeleton } from '@/components/visual';
 import { useLatestDiagnostic, useLibrary, useProgress } from '@/data/hooks';
 import { completion } from '@/domain/access';
 import { greeting } from '@/domain/dates';
 import { MOMENTS, type MomentId } from '@/domain/life-test';
-import { AQUECIMENTO, spaceAccess, trackCourses } from '@/domain/spaces';
+import { spaceAccess, trackCourses } from '@/domain/spaces';
 import { takeFirstTrack } from '@/lib/first-run';
 import { tap } from '@/lib/haptics';
 import { colors, radius, space } from '@/theme';
 
-/** Tela inicial: a jornada Vivah do 1 ao 6, sempre na mesma ordem, e a área grátis. */
+/** Tela inicial: a jornada Vivah do 1 ao 6, sempre na mesma ordem. */
 export default function EscolherTrilha() {
   const { profile } = useSession();
   const library = useLibrary();
@@ -62,20 +61,6 @@ export default function EscolherTrilha() {
         <Txt variant="hero">Sua jornada</Txt>
       </View>
 
-      <FadeIn>
-        <Pressable onPress={() => open(AQUECIMENTO)} accessibilityRole="button" accessibilityLabel="Entrar na Área de Aquecimento, grátis"
-          style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-          <SpaceCover space={{ area: null }} style={styles.free}>
-            <View style={styles.freeIcon}><Icon name="sunrise" size={22} color={colors.deep} /></View>
-            <View style={{ flex: 1 }}>
-              <Txt variant="bodyStrong" style={{ color: colors.deep, fontSize: 17 }}>Aquecimento</Txt>
-              <Txt variant="small" style={{ color: colors.deep }}>Grátis · lives e Escudo do dia</Txt>
-            </View>
-            <Icon name="arrow-right" size={20} color={colors.deep} />
-          </SpaceCover>
-        </Pressable>
-      </FadeIn>
-
       <JourneyList tracks={lib.tracks} recommendedId={diagnostic.data?.recommendedTrackId} info={info} onPick={open} />
     </Screen>
   );
@@ -83,6 +68,4 @@ export default function EscolherTrilha() {
 
 const styles = StyleSheet.create({
   moment: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.coralSoft, borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: space.md },
-  free: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg },
-  freeIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.55)', alignItems: 'center', justifyContent: 'center' },
 });

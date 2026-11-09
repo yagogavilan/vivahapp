@@ -207,7 +207,7 @@ function toPost(p: DemoPost): Post {
 
 function toComment(c: DemoComment): Comment {
   const key = `comment:${c.id}`;
-  const channel = state.posts.find((p) => p.id === c.postId)?.channel ?? 'aquecimento';
+  const channel = state.posts.find((p) => p.id === c.postId)?.channel ?? 'respira';
   return {
     ...c,
     authorLevel: levelOf(c.authorId, channel),
@@ -235,7 +235,7 @@ function seedHistory() {
       });
     });
   }
-  const scores: Record<string, number[]> = { respira: [48, 55, 52, 61, 58, 66, 70, 63, 72, 69, 75, 78, 74], aquecimento: [60, 70, 65, 80] };
+  const scores: Record<string, number[]> = { respira: [48, 55, 52, 61, 58, 66, 70, 63, 72, 69, 75, 78, 74] };
   for (const [trackId, list] of Object.entries(scores)) {
     list.forEach((score, i) => {
       state.logs.push({ day: addDays(t, -(list.length - i)), trackId, kind: 'fechamento', data: {}, score, valid: true });
@@ -384,7 +384,7 @@ export const demoApi: Api = {
   async getMyCourseIds() {
     const uid_ = state.user?.id;
     if (state.profile?.role === 'admin') return cat.courses.map((c) => c.id);
-    const maxLevel = uid_ ? Math.max(1, ...cat.tracks.map((t) => levelOf(uid_, t.id)), levelOf(uid_, 'aquecimento')) : 1;
+    const maxLevel = uid_ ? Math.max(1, ...cat.tracks.map((t) => levelOf(uid_, t.id))) : 1;
     const subscribed = new Set(cat.courses.filter((c) => state.owned.has(c.id) && !c.lowTicket).map((c) => c.trackId));
     const trackCourses = cat.courses.filter((c) => subscribed.has(c.trackId) && !c.lowTicket && !c.rewardOnly && c.minKindnessLevel == null).map((c) => c.id);
     const exclusive = cat.courses.filter((c) => c.minKindnessLevel != null && maxLevel >= c.minKindnessLevel).map((c) => c.id);
@@ -517,7 +517,7 @@ export const demoApi: Api = {
       throw new Error('Você já deu 10 agradecimentos hoje. Amanhã tem mais.');
     }
     let receiverId: string | undefined;
-    let trackId = 'aquecimento';
+    let trackId = 'respira';
     if (target.type === 'post') {
       const p = state.posts.find((x) => x.id === target.id);
       receiverId = p?.authorId;

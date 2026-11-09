@@ -32,7 +32,7 @@ export interface Course {
   sort: number;
   /** Incluído na Assinatura Vivah. */
   inSubscription: boolean;
-  /** Aberto para qualquer pessoa com conta (Área de Aquecimento). */
+  /** Aberto para qualquer pessoa com conta, sem assinatura. */
   isFree: boolean;
   /** Conteúdo exclusivo liberado pelo nível de bondade (não é vendido). */
   minKindnessLevel: number | null;
@@ -300,7 +300,7 @@ export type AlertLevel = 'bem' | 'atencao' | 'critico';
 
 export interface Checkin {
   day: string;
-  /** Trilha do check-in ('aquecimento' na área grátis). */
+  /** Trilha do check-in. */
   trackId: string;
   answers: Record<string, number | number[] | string>;
   feeling: Feeling | null;

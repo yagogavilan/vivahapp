@@ -8,7 +8,7 @@ import { useCommunityMutations, useTodayCheckin } from '@/data/hooks';
 import type { Feeling, PostKind } from '@/data/types';
 import { FEELING_ORDER, FEELINGS } from '@/domain/checkin-protocol';
 import { programFor } from '@/domain/programs';
-import { AQUECIMENTO } from '@/domain/spaces';
+import { FIRST_TRACK } from '@/domain/spaces';
 import { success, tap } from '@/lib/haptics';
 import { TrackContextBar } from '@/components/space';
 import { colors, radius, space } from '@/theme';
@@ -21,7 +21,7 @@ const PLACEHOLDER: Record<PostKind, string> = {
 };
 
 export default function Publicar() {
-  const { channel = AQUECIMENTO, track = AQUECIMENTO } = useLocalSearchParams<{ channel?: string; track?: string }>();
+  const { channel = FIRST_TRACK, track = FIRST_TRACK } = useLocalSearchParams<{ channel?: string; track?: string }>();
   const { feelingToday } = useTodayCheckin(track);
   const { createPost } = useCommunityMutations();
   const [kind, setKind] = useState<PostKind>('desabafo');

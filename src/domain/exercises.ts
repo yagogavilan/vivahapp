@@ -160,7 +160,6 @@ export function exerciseById(id: string): Exercise | undefined {
 
 /** Exercícios sugeridos no botão "Socorro" de cada trilha. */
 export const SOS_BY_TRACK: Record<string, string[]> = {
-  aquecimento: ['respiracao', 'aterramento', 'relaxamento'],
   respira: ['respiracao', 'suspiro', 'aterramento', 'caixa', 'coerencia', 'relaxamento'],
   ritmo: ['descarrego', 'respiracao', 'caixa'],
   eleva: ['controle', 'respiracao', 'caixa'],

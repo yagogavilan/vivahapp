@@ -7,12 +7,12 @@ import { TrackContextBar } from '@/components/space';
 import { Button, Empty, Screen, Txt } from '@/components/ui';
 import { useLogActivity } from '@/data/hooks';
 import { exerciseById } from '@/domain/exercises';
-import { AQUECIMENTO } from '@/domain/spaces';
+import { FIRST_TRACK } from '@/domain/spaces';
 import { space } from '@/theme';
 
 /** Exercício guiado da trilha (descarrego mental, relaxar o corpo…), fora do Socorro da Respira. */
 export default function Exercicio() {
-  const { ex = '', track = AQUECIMENTO } = useLocalSearchParams<{ ex?: string; track?: string }>();
+  const { ex = '', track = FIRST_TRACK } = useLocalSearchParams<{ ex?: string; track?: string }>();
   const exercise = exerciseById(ex);
   const [done, setDone] = useState(false);
   const log = useLogActivity();

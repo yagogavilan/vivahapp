@@ -9,7 +9,7 @@ import { SpaceHeader } from '@/components/space';
 import { Empty, ErrorState, Icon, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn, ScreenSkeleton } from '@/components/visual';
 import { useLibrary, usePointsSummary, usePosts, useTodayCheckin } from '@/data/hooks';
-import { AQUECIMENTO, spaceAccess } from '@/domain/spaces';
+import { spaceAccess } from '@/domain/spaces';
 import { TrackSubscribePanel } from '@/components/locked-panel';
 import type { Feeling, Post } from '@/data/types';
 import { FEELING_ORDER, FEELINGS } from '@/domain/checkin-protocol';
@@ -61,8 +61,8 @@ export default function Comunidade() {
   const [feeling, setFeeling] = useState<Feeling | null>(null);
 
   if (posts.isPending || library.isPending) return <ScreenSkeleton />;
-  const subscribed = sp.id === AQUECIMENTO || (library.data ? spaceAccess(sp.id, library.data.tracks, library.data.courses, library.data.access) === 'open' : false);
-  if (!subscribed && sp.track) {
+  const subscribed = library.data ? spaceAccess(sp.id, library.data.tracks, library.data.courses, library.data.access) === 'open' : false;
+  if (!subscribed) {
     return (
       <Screen>
         <SpaceHeader space={sp} />
@@ -71,9 +71,6 @@ export default function Comunidade() {
           <Txt>Apoio, conquistas e dicas de quem vive o mesmo que você.</Txt>
         </View>
         <TrackSubscribePanel track={sp.track} reason="A assinatura anual libera a comunidade, os cursos em sequência e o espaço de conselheiros da trilha." />
-        <Pressable onPress={() => router.push({ pathname: '/t/[track]/comunidade', params: { track: AQUECIMENTO } })} accessibilityRole="button">
-          <Txt variant="small" style={{ textDecorationLine: 'underline' }}>Ir para a comunidade aberta da Área de Aquecimento</Txt>
-        </Pressable>
       </Screen>
     );
   }

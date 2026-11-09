@@ -61,7 +61,6 @@ const ANXIETY: CheckinQuestion[] = [
 ];
 
 const BY_TRACK: Record<string, CheckinQuestion[]> = {
-  aquecimento: ANXIETY,
   respira: ANXIETY,
   ritmo: [
     { id: 'overload', prompt: 'De 0 a 10, quanta sobrecarga você sente hoje?', type: 'scale10', ends: ['Tranquilo', 'Não dou conta'] },
@@ -141,7 +140,7 @@ export function readCheckin(trackId: string, a: Answers): CheckinReading {
   if (mood <= 2) raise('atencao');
 
   const track = BY_TRACK[trackId] ? trackId : 'respira';
-  if (track === 'respira' || track === 'aquecimento') {
+  if (track === 'respira') {
     const anxiety = num(a, 'anxiety');
     const racing = num(a, 'racing');
     const body = Array.isArray(a.body) ? (a.body as number[]).filter((i) => i !== 5) : [];

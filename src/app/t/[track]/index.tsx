@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
-import { LiveCard } from '@/components/aquecimento';
+import { LiveCard } from '@/components/escudo-e-lives';
 import { BreathSession } from '@/components/breath';
 import { MoodPicker } from '@/components/mood';
 import { PanelSummary } from '@/components/panel';
@@ -32,7 +32,7 @@ import { panelFor } from '@/domain/panels';
 import { evolution, programFor } from '@/domain/programs';
 import { exerciseById } from '@/domain/exercises';
 import { agendaDays, nextLive, todaysEscudo } from '@/domain/schedule';
-import { AQUECIMENTO, trackCourses } from '@/domain/spaces';
+import { trackCourses } from '@/domain/spaces';
 import { tap } from '@/lib/haptics';
 import { useSpace } from '@/lib/space-context';
 import { colors, radius, space } from '@/theme';
@@ -84,7 +84,7 @@ export default function HojeDaTrilha() {
     .sort((a, b) => b.percent - a.percent)[0];
 
   const audio = escudo.data ? todaysEscudo(escudo.data) : undefined;
-  const live = lives.data ? nextLive(lives.data.filter((l) => sp.id === AQUECIMENTO || !l.trackId || l.trackId === sp.id)) : undefined;
+  const live = lives.data ? nextLive(lives.data.filter((l) => !l.trackId || l.trackId === sp.id)) : undefined;
   const plan = logs.data?.find((l) => l.day === today && l.kind === 'plano');
   const review = logs.data?.find((l) => l.day === today && l.kind === 'fechamento');
   const journey = buildJourney({
@@ -96,7 +96,7 @@ export default function HojeDaTrilha() {
     planTitle: program.plan.title,
     reviewTitle: program.review.title,
     escudo: audio,
-    lesson: sp.id === AQUECIMENTO ? undefined : current?.next,
+    lesson: current?.next,
   });
   const evo = evolution((logs.data ?? []).filter((l) => l.kind === 'fechamento' && l.score !== null).map((l) => ({ day: l.day, score: l.score! })), today);
   const todayItems = agendaDays(lives.data ?? [], agenda.data ?? [], new Date(), 1)[0]?.items ?? [];

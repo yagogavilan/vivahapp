@@ -20,7 +20,7 @@ import type {
   StoreItem,
   Track,
 } from './types';
-import { rewardCourseTrack, TRACK_REWARDS } from '../domain/rewards';
+import { TRACK_REWARDS } from '../domain/rewards';
 
 export const AREA_LABEL: Record<LifeArea, string> = {
   mente: 'Mente',
@@ -720,7 +720,7 @@ const courseSeeds: CourseSeed[] = [
     { minKindnessLevel: 6 }),
   // ——— Recompensas de conteúdo (resgatadas com pontos) ———
   ...TRACK_REWARDS.filter((r) => r.courseId).map((r) =>
-    c(rewardCourseTrack(r.trackId), r.courseId!, r.title.replace(/^Aula exclusiva: /, ''), r.kind === 'experiencia' ? 'acompanhamento' : 'bonus', null,
+    c(r.trackId, r.courseId!, r.title.replace(/^Aula exclusiva: /, ''), r.kind === 'experiencia' ? 'acompanhamento' : 'bonus', null,
       r.description, emProducao(r.topics ?? ['Conteúdo em produção']), { rewardOnly: true })),
 ];
 
@@ -748,7 +748,7 @@ for (const course of courseSeeds) {
         kind,
         durationMin,
         sort: li + 1,
-        // A primeira aula do produto-herói fica aberta na Área de Aquecimento.
+        // A primeira aula do produto-herói fica aberta como amostra.
         isPreview: course.id === 'protocolo-desligando-a-mente' && mi === 0 && li === 0,
       });
       lessonMedia.push({

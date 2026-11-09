@@ -575,52 +575,10 @@ const nutre: Program = {
   },
 };
 
-const aquecimento: Program = {
-  trackId: 'aquecimento',
-  purpose: 'Comece por aqui: um passo de cada vez, com o Escudo e as lives.',
-  plan: {
-    title: 'Intenção do dia',
-    subtitle: 'Uma frase para guiar o seu dia.',
-    fields: [
-      { id: 'intencao', type: 'text', label: 'Minha intenção para hoje', placeholder: 'Ex.: ser gentil comigo mesmo' },
-      { id: 'horaEscudo', type: 'time', label: 'Quando vou ouvir o Escudo', placeholder: '07:30' },
-    ],
-  },
-  review: {
-    title: 'Três coisas boas',
-    subtitle: 'Antes de dormir, três coisas que deram certo hoje e por quê.',
-    scoreName: 'Dia bom',
-    fields: [
-      { id: 'coisasBoas', type: 'list', label: 'Três coisas boas de hoje', max: 3, placeholder: 'O que aconteceu e por quê' },
-      { id: 'dia', type: 'scale5', label: 'Como foi o dia' },
-    ],
-  },
-  tools: [{ label: 'Escudo do dia', icon: 'shield', route: 'escudo' }],
-  community: {
-    ajuda: 'Mensagem de ajuda',
-    conselho: 'Frase ou conselho de ajuda',
-    dicaPost: 'Conselho',
-    apoio: respira.community.apoio,
-  },
-  validate(p) {
-    const checks: Check[] = [];
-    checks.push(str(p.intencao) ? { level: 'ok', text: 'Intenção definida.' } : { level: 'erro', text: 'Escreva a sua intenção para hoje.' });
-    checks.push(minutesOf(str(p.horaEscudo)) === null ? { level: 'aviso', text: 'Marque a hora do Escudo: 5 minutos que mudam o dia.' } : { level: 'ok', text: 'Escudo com hora marcada.' });
-    return result(checks);
-  },
-  score(r) {
-    const d = num(r.dia);
-    return scored([
-      { label: 'Três coisas boas', value: Math.min(3, list(r.coisasBoas).length) * 20, max: 60 },
-      { label: 'Como foi o dia', value: d >= 1 ? ((d - 1) / 4) * 40 : 0, max: 40 },
-    ], MESSAGES);
-  },
-};
-
-export const PROGRAMS: Record<string, Program> = { respira, ritmo, eleva, prospera, move, nutre, aquecimento };
+export const PROGRAMS: Record<string, Program> = { respira, ritmo, eleva, prospera, move, nutre };
 
 export function programFor(trackId: string): Program {
-  return PROGRAMS[trackId] ?? aquecimento;
+  return PROGRAMS[trackId] ?? respira;
 }
 
 /** Nome de cada atividade que pontua, do jeito da trilha. */

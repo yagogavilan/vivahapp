@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { Button, Card, Chip, Field, Icon, Loading, Row, Screen, Txt } from '@/components/ui';
 import { useMyCounselorProfile, usePointsSummary, useSaveCounselorProfile } from '@/data/hooks';
-import { AQUECIMENTO } from '@/domain/spaces';
+import { FIRST_TRACK } from '@/domain/spaces';
 import type { CounselorProfile } from '@/data/types';
 import { COUNSELOR_LEVEL, levelInfo } from '@/domain/kindness';
 import { success } from '@/lib/haptics';
@@ -19,7 +19,7 @@ const CODE = [
 
 /** Espaço do conselheiro: só abre no nível Farol, com o código de conduta aceito. */
 export default function MeuEspaco() {
-  const { track = AQUECIMENTO } = useLocalSearchParams<{ track?: string }>();
+  const { track = FIRST_TRACK } = useLocalSearchParams<{ track?: string }>();
   const kindness = usePointsSummary(track);
   const profile = useMyCounselorProfile(track);
   if (kindness.isPending || profile.isPending) return <Loading />;

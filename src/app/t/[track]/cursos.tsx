@@ -1,68 +1,27 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { EscudoCard } from '@/components/aquecimento';
 import { SpaceCover, SpaceHeader } from '@/components/space';
-import { Card, ErrorState, Icon, Pill, Row, Screen, Txt } from '@/components/ui';
+import { ErrorState, Icon, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn, ScreenSkeleton } from '@/components/visual';
-import { useEscudo, useLibrary, useLives, useProgress } from '@/data/hooks';
+import { useLibrary, useProgress } from '@/data/hooks';
 import { completion } from '@/domain/access';
-import { formatWhen } from '@/domain/dates';
-import { liveStatus, todaysEscudo } from '@/domain/schedule';
-import { AQUECIMENTO, lowTicketsOf, spaceAccess, trackCourses } from '@/domain/spaces';
+import { lowTicketsOf, spaceAccess, trackCourses } from '@/domain/spaces';
 import { sequenceInfo, trackSequence } from '@/domain/sequence';
 import { TrackSubscribePanel } from '@/components/locked-panel';
 import { CAN_SELL_IN_APP } from '@/lib/config';
 import { useSpace } from '@/lib/space-context';
 import { colors, radius, shadow, space } from '@/theme';
 
-/** Cursos só da trilha aberta. No Aquecimento: aula de amostra, Escudo e lives. */
+/** Cursos só da trilha aberta. */
 export default function Cursos() {
   const sp = useSpace();
   const library = useLibrary();
   const progress = useProgress();
-  const escudo = useEscudo();
-  const lives = useLives();
 
   if (library.isPending) return <ScreenSkeleton />;
   if (library.error || !library.data) return <ErrorState error={library.error} onRetry={library.refetch} />;
   const lib = library.data;
-
-  if (sp.id === AQUECIMENTO) {
-    const preview = lib.lessons.find((l) => l.isPreview);
-    const audio = escudo.data ? todaysEscudo(escudo.data) : undefined;
-    const recent = (lives.data ?? []).filter((l) => liveStatus(l) !== 'ended').slice(0, 4);
-    return (
-      <Screen>
-        <SpaceHeader space={sp} />
-        <View style={{ gap: 4 }}>
-          <Txt variant="eyebrow">Conteúdo grátis</Txt>
-          <Txt variant="hero">Para começar hoje</Txt>
-        </View>
-        {audio ? <EscudoCard audio={audio} /> : null}
-        {preview ? (
-          <Card onPress={() => router.push({ pathname: '/aula/[id]', params: { id: preview.id } })} style={{ gap: space.sm }}>
-            <Pill label="Aula de amostra" tone="mint" icon="play" />
-            <Txt variant="heading">{preview.title}</Txt>
-            <Txt variant="small">{preview.summary} · {preview.durationMin} min</Txt>
-          </Card>
-        ) : null}
-        <View style={{ gap: space.sm }}>
-          <Txt variant="eyebrow" style={{ color: colors.textSubtle }}>Lives gratuitas</Txt>
-          {recent.map((l) => (
-            <Card key={l.id} onPress={() => router.push({ pathname: '/live/[id]', params: { id: l.id } })} style={{ gap: 2 }}>
-              <Txt variant="bodyStrong">{l.title}</Txt>
-              <Txt variant="small">{formatWhen(l.startsAt)} · com {l.host}</Txt>
-            </Card>
-          ))}
-        </View>
-        <Card tone="sand" onPress={() => router.push('/')} style={{ gap: 4 }}>
-          <Txt variant="bodyStrong">Quer ir mais fundo?</Txt>
-          <Txt variant="small">Conheça as seis trilhas Vivah na tela inicial.</Txt>
-        </Card>
-      </Screen>
-    );
-  }
 
   const subscription = lib.trackById.get(sp.id) ? spaceAccess(sp.id, lib.tracks, lib.courses, lib.access) : 'locked';
   const seq = sequenceInfo(trackSequence(sp.id, lib.courses, lib.modules, lib.lessons), progress.data ?? []);

@@ -78,15 +78,7 @@ const SEEDS: Record<string, Seed[]> = {
     ['experiencia', 6, 5, 'Orientação com nutricionista', 'Conversa de 30 minutos para ajustar a sua rotina alimentar.', ['Como agendar']],
     ['experiencia', 12, 7, 'Acompanhamento Nutre por um mês', 'Plano alimentar individual com retorno.', ['Como funciona o acompanhamento']],
   ],
-  aquecimento: [
-    ['digital', 1, 1, 'Escudo bônus: 7 áudios extras', 'Uma semana de Escudo Anticrise exclusiva para quem ajuda.', ['Áudios 1 a 7']],
-    ['experiencia', 2, 2, 'Sua pergunta respondida ao vivo', 'O Edmilson responde a sua pergunta na próxima live, com o seu nome.', ['Como enviar a pergunta']],
-    ['fisico', 3, 3, 'Marcador de página e carta do Edmilson', 'Marcador Vivah e uma carta escrita à mão, enviados para a sua casa.'],
-  ],
 };
-
-/** Curso exclusivo da recompensa: a área grátis usa a Respira como "casa" do conteúdo. */
-export const rewardCourseTrack = (trackId: string) => (trackId === 'aquecimento' ? 'respira' : trackId);
 
 export const TRACK_REWARDS: TrackReward[] = Object.entries(SEEDS).flatMap(([trackId, seeds]) => [
   ...seeds.map(([kind, months, minLevel, title, description, topics], i): TrackReward => {

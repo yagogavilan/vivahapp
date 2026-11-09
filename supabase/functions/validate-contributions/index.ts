@@ -25,7 +25,6 @@ const AI_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const AI_MODEL = Deno.env.get('VIVAH_AI_MODEL') ?? 'claude-haiku-5-5';
 
 const PURPOSE: Record<string, string> = {
-  aquecimento: 'Área grátis: ansiedade, Escudo Anticrise e acolhimento.',
   respira: 'Mente: ansiedade, pensar demais, sono e autoestima.',
   ritmo: 'Gestão do tempo: prioridades, foco e produtividade.',
   eleva: 'Carreira e negócios: CS, vendas, liderança e comunicação.',
@@ -46,7 +45,7 @@ async function askAi(kind: ContributionKind, track: string, body: string): Promi
       body: JSON.stringify({
         model: AI_MODEL,
         max_tokens: 200,
-        messages: [{ role: 'user', content: aiPrompt(kind, PURPOSE[track] ?? PURPOSE.aquecimento, body) }],
+        messages: [{ role: 'user', content: aiPrompt(kind, PURPOSE[track] ?? PURPOSE.respira, body) }],
       }),
     });
     if (!res.ok) return null;

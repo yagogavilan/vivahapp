@@ -9,7 +9,7 @@ import { LevelBadge } from '@/components/feeling';
 import { Button, Card, Empty, Icon, Loading, Pill, Row, Screen, Txt } from '@/components/ui';
 import { FadeIn } from '@/components/visual';
 import { useAdviceRequests, useCounselors, usePointsSummary } from '@/data/hooks';
-import { AQUECIMENTO } from '@/domain/spaces';
+import { FIRST_TRACK } from '@/domain/spaces';
 import { COUNSELOR_LEVEL, levelInfo } from '@/domain/kindness';
 import { TrackContextBar } from '@/components/space';
 import { colors, radius, space } from '@/theme';
@@ -17,7 +17,7 @@ import { colors, radius, space } from '@/theme';
 
 export default function Conselheiros() {
   const { user } = useSession();
-  const { track = AQUECIMENTO } = useLocalSearchParams<{ track?: string }>();
+  const { track = FIRST_TRACK } = useLocalSearchParams<{ track?: string }>();
   const counselors = useCounselors(track);
   const requests = useAdviceRequests();
   const kindness = usePointsSummary(track);

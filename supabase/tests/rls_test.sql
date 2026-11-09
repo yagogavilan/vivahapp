@@ -46,10 +46,11 @@ do $$ declare blocked boolean; begin
     'áudios futuros do Escudo não deveriam aparecer';
   assert (select count(*) from public.lives) > 0, 'Bia deveria ver as lives';
 
-  -- Comunidade: Bia publica no aquecimento, mas não no canal da trilha.
-  insert into public.posts (channel, body, author_name) values ('aquecimento', 'Oi, pessoal!', 'Nome falso');
-  assert (select author_name from public.posts where body = 'Oi, pessoal!') = 'Aluno Vivah',
-    'o nome do autor deveria vir do perfil, não do app';
+  -- Comunidade: sem assinatura, Bia não publica em canal nenhum (o canal aberto do Aquecimento acabou).
+  blocked := false;
+  begin insert into public.posts (channel, body) values ('aquecimento', 'Oi, pessoal!'); exception when others then blocked := true; end;
+  assert blocked, 'o canal aberto do Aquecimento não existe mais';
+  assert not ('aquecimento' = any (public.my_channels())), 'Aquecimento fora da lista de canais';
   blocked := false;
   begin insert into public.posts (channel, body) values ('respira', 'Tentando entrar'); exception when others then blocked := true; end;
   assert blocked, 'Bia não deveria publicar no canal da Respira';
@@ -144,9 +145,9 @@ do $$ declare blocked boolean; begin
   begin insert into public.modules (id, course_id, title) values ('x', 'mente-silenciosa', 'x'); exception when others then blocked := true; end;
   assert blocked, 'aluna não cria módulos';
 
-  insert into public.posts (channel, body) values ('respira', 'Terminei o dia 7!');
-  assert (select author_name from public.posts where body = 'Terminei o dia 7!') = 'Ana', 'nome do autor: primeiro nome';
-  assert (select count(*) from public.posts_feed where channel = 'aquecimento') = 1, 'Ana deveria ver o post do aquecimento';
+  insert into public.posts (channel, body, author_name) values ('respira', 'Terminei o dia 7!', 'Nome falso');
+  assert (select author_name from public.posts where body = 'Terminei o dia 7!') = 'Ana', 'nome do autor: primeiro nome do perfil, não do app';
+  assert public.my_channels() = array['respira'], 'assinante da Respira só tem o canal da Respira';
 end $$;
 commit;
 
@@ -234,13 +235,18 @@ commit;
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-00000000000c', 'carla@exemplo.com', '{"full_name":"Carla Lima"}'),
   ('00000000-0000-0000-0000-00000000000d', 'duda@exemplo.com', '{"full_name":"Duda Reis"}');
+-- As duas assinam a Respira: a comunidade é só de quem assina a trilha.
+insert into public.entitlements (email, course_id, product_id, hotmart_transaction)
+select u.email, pc.course_id, pc.product_id, 'HP-' || u.email from public.product_courses pc,
+  (values ('carla@exemplo.com'), ('duda@exemplo.com')) as u(email)
+ where pc.product_id = 'trilha-respira';
 
 -- Carla publica 14 dicas: só a primeira do dia entra para validação (4 pontos); as outras não pontuam.
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000c","email":"carla@exemplo.com","role":"authenticated"}';
 insert into public.posts (channel, body, kind, feeling)
-select 'aquecimento', 'Dica ' || g, 'dica', 'calma' from generate_series(1, 14) g;
+select 'respira', 'Dica ' || g, 'dica', 'calma' from generate_series(1, 14) g;
 commit;
 
 do $$ begin
@@ -259,7 +265,7 @@ select ('10000000-0000-0000-0000-' || lpad(g::text, 12, '0'))::uuid, 'g' || g ||
 insert into public.post_reactions (post_id, user_id, kind)
 select p.id, u.id, 'like' from auth.users u, public.posts p where u.email like 'g%@exemplo.com' and p.body = 'Dica 1';
 insert into public.point_events (user_id, actor_id, track_id, kind, points, status, day, created_at)
-select '00000000-0000-0000-0000-00000000000c', u.id, 'aquecimento', 'apoio', 5, 'valido', current_date - (d * 7), now() - (d * interval '7 days')
+select '00000000-0000-0000-0000-00000000000c', u.id, 'respira', 'apoio', 5, 'valido', current_date - (d * 7), now() - (d * interval '7 days')
   from auth.users u, generate_series(1, 10) d where u.email like 'g%@exemplo.com';
 commit;
 
@@ -267,11 +273,11 @@ do $$ declare s record; begin
   assert (select count(*) from public.point_events where kind = 'curtida' and status = 'valido' and user_id = '00000000-0000-0000-0000-00000000000c') = 10,
     'só 10 curtidas por dia pontuam';
   assert (select count(*) from public.point_events where kind = 'curtida' and status = 'recusado') = 140, 'o resto das curtidas fica sem pontos';
-  select * into s from public.points_stats('00000000-0000-0000-0000-00000000000c', 'aquecimento');
+  select * into s from public.points_stats('00000000-0000-0000-0000-00000000000c', 'respira');
   assert s.earned = 7510, format('Carla deveria ter 7510 pontos, veio %s', s.earned);
   assert s.givers = 150, 'Carla deveria ter 150 pessoas diferentes';
-  assert public.kindness_level('00000000-0000-0000-0000-00000000000c', 'aquecimento') = 6, 'Carla é Farol no Aquecimento';
-  assert public.kindness_level('00000000-0000-0000-0000-00000000000c', 'respira') = 1, 'nível é por trilha: na Respira, Semente';
+  assert public.kindness_level('00000000-0000-0000-0000-00000000000c', 'respira') = 6, 'Carla é Farol na Respira';
+  assert public.kindness_level('00000000-0000-0000-0000-00000000000c', 'ritmo') = 1, 'nível é por trilha: no Ritmo, Semente';
 end $$;
 
 -- Descurtir tira o ponto.
@@ -288,31 +294,31 @@ begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000c","email":"carla@exemplo.com","role":"authenticated"}';
 do $$ declare blocked boolean; begin
-  insert into public.counselors (track_id, bio, topics, code_accepted_at) values ('aquecimento', 'Já passei por crises de ansiedade.', '{ansiedade,sono}', now());
+  insert into public.counselors (track_id, bio, topics, code_accepted_at) values ('respira', 'Já passei por crises de ansiedade.', '{ansiedade,sono}', now());
   assert (select display_name from public.counselors where user_id = auth.uid()) = 'Carla', 'conselheira com o primeiro nome';
   blocked := false;
-  begin insert into public.counselors (track_id, code_accepted_at) values ('respira', now()); exception when others then blocked := true; end;
+  begin insert into public.counselors (track_id, code_accepted_at) values ('ritmo', now()); exception when others then blocked := true; end;
   assert blocked, 'conselheira só na trilha em que é Farol';
   assert 'formacao-conselheiro' in (select public.my_course_ids()), 'Farol abre a Formação de Conselheiro';
-  assert 'premio-aquecimento-r1' not in (select public.my_course_ids()), 'recompensa só abre depois do resgate';
-  perform public.redeem_reward('aquecimento-r1');
-  assert 'premio-aquecimento-r1' in (select public.my_course_ids()), 'resgate abre o conteúdo';
-  assert (select status from public.reward_redemptions where reward_id = 'aquecimento-r1') = 'liberado', 'digital fica liberado';
-  assert (select spent from public.points_stats(auth.uid(), 'aquecimento')) = 1140, 'resgate gasta 1.140 pontos';
-  assert public.kindness_level(auth.uid(), 'aquecimento') = 6, 'gastar pontos não baixa o nível';
-  perform public.redeem_reward('aquecimento-r3');
-  assert (select status from public.reward_redemptions where reward_id = 'aquecimento-r3') = 'solicitado', 'físico fica solicitado';
-  blocked := false;
-  begin perform public.redeem_reward('aquecimento-r1'); exception when others then blocked := true; end;
-  assert blocked, 'não dá para resgatar duas vezes';
+  assert 'premio-respira-r1' not in (select public.my_course_ids()), 'recompensa só abre depois do resgate';
+  perform public.redeem_reward('respira-r1');
+  assert 'premio-respira-r1' in (select public.my_course_ids()), 'resgate abre o conteúdo';
+  assert (select status from public.reward_redemptions where reward_id = 'respira-r1') = 'liberado', 'digital fica liberado';
+  assert (select spent from public.points_stats(auth.uid(), 'respira')) = 1140, 'resgate gasta 1.140 pontos';
+  assert public.kindness_level(auth.uid(), 'respira') = 6, 'gastar pontos não baixa o nível';
+  perform public.redeem_reward('respira-r4');
+  assert (select status from public.reward_redemptions where reward_id = 'respira-r4') = 'solicitado', 'físico fica solicitado';
   blocked := false;
   begin perform public.redeem_reward('respira-r1'); exception when others then blocked := true; end;
-  assert blocked, 'pontos do Aquecimento não pagam recompensa da Respira';
+  assert blocked, 'não dá para resgatar duas vezes';
   blocked := false;
-  begin insert into public.reward_redemptions (reward_id, track_id, cost, status) values ('aquecimento-r2', 'aquecimento', 0, 'liberado'); exception when others then blocked := true; end;
+  begin perform public.redeem_reward('ritmo-r1'); exception when others then blocked := true; end;
+  assert blocked, 'pontos da Respira não pagam recompensa do Ritmo';
+  blocked := false;
+  begin insert into public.reward_redemptions (reward_id, track_id, cost, status) values ('respira-r2', 'respira', 0, 'liberado'); exception when others then blocked := true; end;
   assert blocked, 'resgate só pela função (que confere o saldo)';
   blocked := false;
-  begin insert into public.point_events (user_id, track_id, kind, points) values (auth.uid(), 'aquecimento', 'apoio', 5); exception when others then blocked := true; end;
+  begin insert into public.point_events (user_id, track_id, kind, points) values (auth.uid(), 'respira', 'apoio', 5); exception when others then blocked := true; end;
   assert blocked, 'ninguém escreve pontos direto no extrato';
 end $$;
 commit;
@@ -321,7 +327,7 @@ begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000d","email":"duda@exemplo.com","role":"authenticated"}';
 do $$ declare blocked boolean; v_post uuid; v_req uuid; f record; begin
-  insert into public.posts (channel, body, kind, feeling) values ('aquecimento', 'Hoje foi difícil, alguém me ajuda?', 'apoio', 'ansiedade') returning id into v_post;
+  insert into public.posts (channel, body, kind, feeling) values ('respira', 'Hoje foi difícil, alguém me ajuda?', 'apoio', 'ansiedade') returning id into v_post;
   blocked := false;
   begin insert into public.thanks (post_id) values (v_post); exception when others then blocked := true; end;
   assert blocked, 'ninguém agradece o próprio post';
@@ -342,16 +348,16 @@ do $$ declare blocked boolean; v_post uuid; v_req uuid; f record; begin
   assert f.i_thanked, 'feed marca que eu agradeci';
 
   blocked := false;
-  begin insert into public.counselors (track_id, code_accepted_at) values ('aquecimento', now()); exception when others then blocked := true; end;
+  begin insert into public.counselors (track_id, code_accepted_at) values ('respira', now()); exception when others then blocked := true; end;
   assert blocked, 'Semente não pode ser conselheira';
   blocked := false;
-  begin perform public.redeem_reward('aquecimento-r1'); exception when others then blocked := true; end;
+  begin perform public.redeem_reward('respira-r1'); exception when others then blocked := true; end;
   assert blocked, 'sem saldo não resgata';
 
-  assert (select count(*) from public.list_counselors('aquecimento')) = 1, 'Duda vê a Carla como conselheira do Aquecimento';
-  assert (select count(*) from public.list_counselors('respira')) = 0, 'conselheiros são por trilha';
+  assert (select count(*) from public.list_counselors('respira')) = 1, 'Duda vê a Carla como conselheira da Respira';
+  assert (select count(*) from public.list_counselors('ritmo')) = 0, 'conselheiros são por trilha';
   insert into public.advice_requests (counselor_id, track_id, topic, message)
-  values ('00000000-0000-0000-0000-00000000000c', 'aquecimento', 'Ansiedade à noite', 'Acordo de madrugada com a cabeça a mil.') returning id into v_req;
+  values ('00000000-0000-0000-0000-00000000000c', 'respira', 'Ansiedade à noite', 'Acordo de madrugada com a cabeça a mil.') returning id into v_req;
   assert (select status from public.advice_requests where id = v_req) = 'pendente', 'pedido começa pendente';
 
   insert into public.daily_logs (day, track_id, kind, data, score) values ('2020-01-01', 'ritmo', 'plano', '{"prioridades":["Enviar a proposta"]}', null);
@@ -360,7 +366,7 @@ do $$ declare blocked boolean; v_post uuid; v_req uuid; f record; begin
   update public.profiles set health_consent_at = now() where id = auth.uid();
   insert into public.checkins (day, track_id, mood, energy, sleep_hours, sleep_quality, answers, feeling, alert_level)
   values (current_date, 'respira', 2, 2, 5, 2, '{"anxiety": 9}', 'ansiedade', 'critico'),
-         (current_date, 'aquecimento', 3, 3, 7, 3, '{}', 'calma', 'bem');
+         (current_date, 'ritmo', 3, 3, 7, 3, '{}', 'calma', 'bem');
   assert (select count(*) from public.checkins) = 2, 'um check-in por trilha no mesmo dia';
 end $$;
 commit;
@@ -415,7 +421,7 @@ end $$;
 begin;
 set local request.jwt.claims = '{"role":"service_role"}';
 insert into public.support_actions (post_id, helper_id, helped_id, track_id, mode, scheduled_at, status)
-select id, '00000000-0000-0000-0000-00000000000c', '00000000-0000-0000-0000-00000000000d', 'aquecimento', 'agenda', now() + interval '2 hours', 'oferecido'
+select id, '00000000-0000-0000-0000-00000000000c', '00000000-0000-0000-0000-00000000000d', 'respira', 'agenda', now() + interval '2 hours', 'oferecido'
   from public.posts where kind = 'apoio';
 commit;
 

@@ -4,32 +4,12 @@ import { View } from 'react-native';
 import { useSession } from '../auth/session';
 import { useAgenda, useAgendaMutations } from '../data/hooks';
 import { scheduleLiveReminder } from '../lib/reminders';
-import type { EscudoAudio, Live } from '../data/types';
+import type { Live } from '../data/types';
 import { formatCountdown, formatWhen } from '../domain/dates';
 import { liveStatus } from '../domain/schedule';
 import { colors, space } from '../theme';
 import { Button, Card, Icon, Pill, Row, Txt } from './ui';
 
-export function EscudoCard({ audio }: { audio: EscudoAudio }) {
-  return (
-    <Card tone="dark" onPress={() => router.push({ pathname: '/escudo/[id]', params: { id: audio.id } })} style={{ gap: space.md }}>
-      <Row>
-        <Icon name="shield" size={18} color={colors.coral} />
-        <Txt variant="eyebrow" style={{ color: colors.coral }}>Escudo Anticrise de hoje</Txt>
-      </Row>
-      <Txt variant="title" style={{ color: colors.onDark }}>{audio.title}</Txt>
-      <Txt style={{ color: colors.onDarkMuted }}>{audio.summary}</Txt>
-      <Row gap={space.md}>
-        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.coral, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="play" size={22} color={colors.deep} />
-        </View>
-        <Txt variant="bodyStrong" style={{ color: colors.onDark }}>Ouvir agora · {audio.durationMin} min</Txt>
-      </Row>
-    </Card>
-  );
-}
-
-/** Botão de salvar a live na agenda do app. */
 export function SaveLiveButton({ live }: { live: Live }) {
   const agenda = useAgenda();
   const { create } = useAgendaMutations();
@@ -64,7 +44,7 @@ export function LiveCard({ live }: { live: Live }) {
       <Row style={{ justifyContent: 'space-between' }}>
         <Row>
           <Icon name="radio" size={18} color={colors.coralText} />
-          <Txt variant="eyebrow">{status === 'live' ? 'Ao vivo agora' : 'Próxima live gratuita'}</Txt>
+          <Txt variant="eyebrow">{status === 'live' ? 'Ao vivo agora' : 'Próxima live'}</Txt>
         </Row>
         {status === 'live' ? <Pill label="AO VIVO" tone="coral" /> : <Pill label={formatCountdown(live.startsAt)} />}
       </Row>

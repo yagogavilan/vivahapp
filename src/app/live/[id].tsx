@@ -2,7 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
-import { SaveLiveButton } from '@/components/aquecimento';
+import { SaveLiveButton } from '@/components/escudo-e-lives';
 import { Card, Empty, Icon, Loading, Pill, Row, Screen, Txt } from '@/components/ui';
 import { YouTubeEmbed } from '@/components/youtube-embed';
 import { useLives, useLogActivity } from '@/data/hooks';
@@ -34,7 +34,7 @@ export default function LiveScreen() {
       <View style={{ gap: space.sm }}>
         <Row>
           <Icon name="radio" size={18} color={colors.coralText} />
-          <Txt variant="eyebrow">Live gratuita</Txt>
+          <Txt variant="eyebrow">Live</Txt>
           {status === 'live' ? <Pill label="AO VIVO" tone="coral" /> : null}
           {status === 'replay' ? <Pill label={`Replay até ${formatWhen(live.replayUntil!)}`} tone="mint" /> : null}
         </Row>
