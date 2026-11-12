@@ -56,7 +56,7 @@ export default function Curso() {
         <TrackCover area={track.area} muted={state === 'soon'} style={{ padding: space.xl, gap: space.sm }}>
           <Pressable onPress={() => router.push({ pathname: '/t/[track]/cursos', params: { track: track.id } })}>
             <Txt variant="eyebrow" style={{ color: state === 'soon' ? colors.coralText : colors.coral }}>
-              {course.lowTicket ? `Low ticket · Trilha ${track.title}` : `Trilha ${track.title}`}
+              {course.lowTicket ? `Material avulso da trilha ${track.title}` : `Trilha ${track.title}`}
             </Txt>
           </Pressable>
           <Txt variant="hero" style={{ color: state === 'soon' ? colors.text : colors.onDark }}>{course.title}</Txt>

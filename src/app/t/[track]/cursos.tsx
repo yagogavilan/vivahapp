@@ -81,7 +81,7 @@ export default function Cursos() {
       {lows.length ? (
         <View style={{ gap: space.md }}>
           <View style={{ gap: 2 }}>
-            <Txt variant="title">Low tickets da {sp.title}</Txt>
+            <Txt variant="title">Materiais avulsos</Txt>
             <Txt variant="small">Aulas curtas, planilhas e ferramentas</Txt>
           </View>
           <View style={styles.lowGrid}>
